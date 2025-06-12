@@ -1,11 +1,7 @@
 "use client"
-
-import { useState } from "react"
 import { CheckIcon } from "@heroicons/react/24/solid"
 
-export default function ThesisPage() {
-  const [thesisProposalStatus, setThesisProposalStatus] = useState("submitted")
-
+export default function StudentThesis() {
   const steps = [
     { id: 1, name: "Supervisor\nSelection", status: "completed" },
     { id: 2, name: "Proposal\nSubmission", status: "completed" },
@@ -83,12 +79,7 @@ export default function ThesisPage() {
               {steps.map((step, index) => (
                 <div key={step.id} className="flex flex-col items-center">
                   {/* Circle */}
-                  <div
-                    className={`
-                    w-4 h-4 rounded-full border-2 flex items-center justify-center
-                    ${step.status === "completed" ? "bg-green-500 border-green-500" : "bg-white border-gray-300"}
-                  `}
-                  >
+                  <div className={`progress-step ${step.status}`}>
                     {step.status === "completed" && <CheckIcon className="w-2.5 h-2.5 text-white" />}
                   </div>
 

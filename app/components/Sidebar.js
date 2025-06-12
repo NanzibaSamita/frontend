@@ -5,10 +5,10 @@ import { usePathname } from "next/navigation"
 import { UserIcon, DocumentTextIcon, UserGroupIcon, BookOpenIcon } from "@heroicons/react/24/outline"
 
 const navigation = [
-  { name: "Profile", href: "/dashboard/profile", icon: UserIcon },
-  { name: "Thesis", href: "/dashboard/thesis", icon: DocumentTextIcon },
-  { name: "Supervisor", href: "/dashboard/supervisor", icon: UserGroupIcon },
-  { name: "Courses", href: "/dashboard/courses", icon: BookOpenIcon },
+  { name: "Profile", href: "/student/profile", icon: UserIcon },
+  { name: "Thesis", href: "/student/thesis", icon: DocumentTextIcon },
+  { name: "Supervisor", href: "/student/supervisor", icon: UserGroupIcon },
+  { name: "Courses", href: "/student/courses", icon: BookOpenIcon },
 ]
 
 export default function Sidebar() {
@@ -20,7 +20,7 @@ export default function Sidebar() {
         <div className="flex-1 flex flex-col pt-8 pb-4 overflow-y-auto">
           {/* PAMS Logo - Centered and Clickable */}
           <div className="flex items-center justify-center flex-shrink-0 px-6 mb-12">
-            <Link href="/dashboard">
+            <Link href="/student">
               <div className="bg-white rounded-lg px-4 py-2">
                 <h1 className="text-gray-800 text-2xl font-bold">PAMS</h1>
               </div>
