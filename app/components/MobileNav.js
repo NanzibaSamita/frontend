@@ -7,10 +7,10 @@ import { Bars3Icon, XMarkIcon } from "@heroicons/react/24/outline"
 import { UserIcon, DocumentTextIcon, UserGroupIcon, BookOpenIcon } from "@heroicons/react/24/outline"
 
 const navigation = [
-  { name: "Profile", href: "/dashboard/profile", icon: UserIcon },
-  { name: "Thesis", href: "/dashboard/thesis", icon: DocumentTextIcon },
-  { name: "Supervisor", href: "/dashboard/supervisor", icon: UserGroupIcon },
-  { name: "Courses", href: "/dashboard/courses", icon: BookOpenIcon },
+  { name: "Profile", href: "/student/profile", icon: UserIcon },
+  { name: "Thesis", href: "/student/thesis", icon: DocumentTextIcon },
+  { name: "Supervisor", href: "/student/supervisor", icon: UserGroupIcon },
+  { name: "Courses", href: "/student/courses", icon: BookOpenIcon },
 ]
 
 export default function MobileNav() {
@@ -20,7 +20,7 @@ export default function MobileNav() {
   return (
     <div className="md:hidden">
       <div className="bg-gray-700 px-4 py-4 flex items-center justify-between">
-        <Link href="/dashboard">
+        <Link href="/student">
           <h1 className="text-white text-2xl font-bold">PAMS</h1>
         </Link>
         <button onClick={() => setIsOpen(!isOpen)} className="text-white hover:text-gray-300">

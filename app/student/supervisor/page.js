@@ -3,10 +3,10 @@
 import { useState } from "react"
 import { ChevronUpIcon } from "@heroicons/react/24/outline"
 
-export default function SupervisorPage() {
+export default function StudentSupervisor() {
   const [selectedSupervisor, setSelectedSupervisor] = useState(null)
   const [showDropdown, setShowDropdown] = useState(false)
-  const [supervisorStatus, setSupervisorStatus] = useState("not_selected") // "not_selected", "selected", "assigned"
+  const [supervisorStatus, setSupervisorStatus] = useState("assigned") // "not_selected", "selected", "assigned"
 
   const supervisors = [
     { id: 1, name: "Aashanan Rahman", title: "Junior Lecturer" },
@@ -15,17 +15,12 @@ export default function SupervisorPage() {
     { id: 4, name: "Dr. Md. Azam Hossain", title: "Associate Professor" },
   ]
 
+  const assignedSupervisor = { name: "Mahila Noushin Raida", title: "Lecturer" }
+
   const handleSupervisorSelect = (supervisor) => {
     setSelectedSupervisor(supervisor)
     setShowDropdown(false)
     setSupervisorStatus("selected")
-  }
-
-  const handleConfirmSelection = () => {
-    if (selectedSupervisor) {
-      setSupervisorStatus("assigned")
-      alert("Supervisor selection confirmed!")
-    }
   }
 
   return (
@@ -65,15 +60,10 @@ export default function SupervisorPage() {
           </div>
 
           <button
-            onClick={handleConfirmSelection}
-            disabled={!selectedSupervisor}
-            className={`px-6 py-2 rounded-lg border font-medium transition-colors ${
-              selectedSupervisor
-                ? "bg-white text-gray-700 border-green-500 hover:bg-green-50"
-                : "bg-gray-100 text-gray-400 border-gray-300 cursor-not-allowed"
-            }`}
+            className="px-6 py-2 bg-gray-100 text-gray-700 rounded-lg border border-gray-300 font-medium"
+            disabled
           >
-            {supervisorStatus === "assigned" ? "Selected" : "Select"}
+            Selected
           </button>
         </div>
       </div>
@@ -84,16 +74,8 @@ export default function SupervisorPage() {
 
         <div className="bg-white rounded-lg border border-gray-200 p-6">
           <div className="flex justify-between items-center">
-            <span className="text-xl font-medium text-gray-900">
-              {supervisorStatus === "assigned"
-                ? "Assigned"
-                : supervisorStatus === "selected"
-                  ? "Selected"
-                  : "Not Selected"}
-            </span>
-            {supervisorStatus === "assigned" && selectedSupervisor && (
-              <span className="text-xl text-gray-900">{selectedSupervisor.name}</span>
-            )}
+            <span className="text-xl font-medium text-gray-900">Assigned</span>
+            <span className="text-xl text-gray-900">{assignedSupervisor.name}</span>
           </div>
         </div>
       </div>
