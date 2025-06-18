@@ -9,7 +9,7 @@ export default function StudentSidebar() {
 
   const links = [
     { name: "Profile", href: "/dashboard/student/profile", icon: <Users size={18} /> },
-    { name: "Courses", href: "/dashboard/student/course", icon: <BookText size={18} /> },
+    { name: "Courses", href: "/dashboard/student/courses", icon: <BookText size={18} /> },
     { name: "Thesis", href: "/dashboard/student/thesis", icon: <FileText size={18} /> },
     { name: "Supervisor", href: "/dashboard/student/supervisor", icon: <GraduationCap size={18} /> },
   ]
