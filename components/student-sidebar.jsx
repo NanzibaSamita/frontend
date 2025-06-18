@@ -1,66 +1,36 @@
 "use client"
 
-import { User, FileText, Users, BookOpen } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarHeader,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-} from "@/components/ui/sidebar"
+import { GraduationCap, FileText, Users, BookText } from "lucide-react"
 
-const menuItems = [
-  {
-    title: "Profile",
-    url: "/dashboard/student/profile",
-    icon: User,
-  },
-  {
-    title: "Thesis",
-    url: "/dashboard/student/thesis",
-    icon: FileText,
-  },
-  {
-    title: "Supervisor",
-    url: "/dashboard/student/supervisor",
-    icon: Users,
-  },
-  {
-    title: "Courses",
-    url: "/dashboard/student/courses",
-    icon: BookOpen,
-  },
-]
-
-export function StudentSidebar() {
+export default function StudentSidebar() {
   const pathname = usePathname()
 
+  const links = [
+    { name: "Profile", href: "/dashboard/student/profile", icon: <Users size={18} /> },
+    { name: "Courses", href: "/dashboard/student/course", icon: <BookText size={18} /> },
+    { name: "Thesis", href: "/dashboard/student/thesis", icon: <FileText size={18} /> },
+    { name: "Supervisor", href: "/dashboard/student/supervisor", icon: <GraduationCap size={18} /> },
+  ]
+
   return (
-    <Sidebar className="border-r border-slate-200" collapsible="icon">
-      <SidebarHeader className="bg-slate-800 text-white p-6">
-        <div className="text-2xl font-bold">PAMS</div>
-      </SidebarHeader>
-      <SidebarContent className="bg-slate-800 text-white">
-        <SidebarMenu className="space-y-2 p-4">
-          {menuItems.map((item) => (
-            <SidebarMenuItem key={item.title}>
-              <SidebarMenuButton
-                asChild
-                isActive={pathname === item.url}
-                className="text-white hover:bg-slate-700 data-[active=true]:bg-slate-700"
-              >
-                <Link href={item.url} className="flex items-center gap-3 px-3 py-2">
-                  <item.icon className="h-5 w-5" />
-                  <span>{item.title}</span>
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          ))}
-        </SidebarMenu>
-      </SidebarContent>
-    </Sidebar>
+    <aside className="bg-gray-800 text-white min-h-screen w-56 p-4">
+      <h2 className="text-2xl font-bold mb-8">PAMS</h2>
+      <nav className="flex flex-col space-y-2">
+        {links.map(({ name, href, icon }) => (
+          <Link
+            key={name}
+            href={href}
+            className={`flex items-center gap-2 px-3 py-2 rounded-md hover:bg-gray-700 transition ${
+              pathname.startsWith(href) ? "bg-gray-700" : ""
+            }`}
+          >
+            {icon}
+            <span>{name}</span>
+          </Link>
+        ))}
+      </nav>
+    </aside>
   )
 }
