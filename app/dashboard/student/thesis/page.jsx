@@ -1,91 +1,113 @@
 "use client"
 
 import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import { CheckCircle, Circle } from "lucide-react"
-
-const thesisSteps = [
-  { name: "Supervisor Selection", status: "completed" },
-  { name: "Proposal Submission", status: "completed" },
-  { name: "PGC Review", status: "completed" },
-  { name: "CASR Review", status: "pending" },
-  { name: "Thesis Submission", status: "pending" },
-  { name: "Defence Scheduled", status: "pending" },
-]
 
 export default function ThesisPage() {
-  const [proposalStatus, setProposalStatus] = useState("Submitted")
+  const [thesisProposalStatus, setThesisProposalStatus] = useState("Submit")
+  const [thesisStatus, setThesisStatus] = useState("Upload Document")
+  const [defenseStatus, setDefenseStatus] = useState("Schedule")
+
+  const handleThesisProposalSubmit = () => {
+    setThesisProposalStatus("Submitted")
+  }
+
+  const handleThesisSubmit = () => {
+    setThesisStatus("Submitted")
+  }
+
+  const handleScheduleDefense = () => {
+    setDefenseStatus("Scheduled")
+  }
 
   return (
-    <div className="p-8">
-      <h1 className="text-3xl font-bold text-slate-800 mb-8">Thesis</h1>
+    <main className="flex-1 p-8">
+      {/* Thesis Heading - Outside the box */}
+      <h2 className="text-3xl font-semibold text-black mb-8">Thesis</h2>
 
-      <div className="space-y-8 max-w-4xl">
-        {/* Thesis Actions */}
+      <div className="max-w-4xl mx-auto bg-white p-6 rounded-lg shadow-md">
+        {/* Thesis Actions (inside the box) */}
         <div className="space-y-4">
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <span className="text-lg font-medium">Submit Thesis Proposal</span>
-                <Button
-                  variant={proposalStatus === "Submitted" ? "secondary" : "default"}
-                  className={
-                    proposalStatus === "Submitted"
-                      ? "bg-green-100 text-green-800 border-green-300"
-                      : "bg-green-600 hover:bg-green-700"
-                  }
-                  disabled={proposalStatus === "Submitted"}
-                >
-                  {proposalStatus === "Submitted" ? "Submitted" : "Upload Document"}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+          {/* Submit Thesis Proposal */}
+          <div className="flex items-center justify-between">
+            <span className={`text-lg ${thesisProposalStatus === "Submitted" ? "text-green-600" : "text-black"}`}>
+              {thesisProposalStatus === "Submitted" ? "Submitted" : "Submit Thesis Proposal"}
+            </span>
+            <button
+              onClick={handleThesisProposalSubmit}
+              className="w-[250px] py-3 px-6 bg-green-600 text-white font-semibold rounded-md hover:bg-green-700"
+              disabled={thesisProposalStatus === "Submitted"}
+            >
+              {thesisProposalStatus === "Submit"
+                ? "Upload Document"
+                : "Submitted"}
+            </button>
+          </div>
 
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <span className="text-lg font-medium">Submit Thesis</span>
-                <Button className="bg-green-600 hover:bg-green-700">Upload Document</Button>
-              </div>
-            </CardContent>
-          </Card>
+          {/* Submit Thesis */}
+          <div className="flex items-center justify-between">
+            <span className={`text-lg ${thesisStatus === "Submitted" ? "text-green-600" : "text-black"}`}>
+              {thesisStatus === "Submitted" ? "Submitted" : "Submit Thesis"}
+            </span>
+            <button
+              onClick={handleThesisSubmit}
+              className="w-[250px] py-3 px-6 bg-green-600 text-white font-semibold rounded-md hover:bg-green-700"
+              disabled={thesisStatus === "Submitted"}
+            >
+              {thesisStatus === "Upload Document" ? "Upload Document" : "Submitted"}
+            </button>
+          </div>
 
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <span className="text-lg font-medium">Schedule Defense</span>
-                <Button className="bg-green-600 hover:bg-green-700">Schedule</Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Thesis Status */}
-        <div>
-          <h2 className="text-2xl font-bold text-slate-800 mb-6">Thesis Status</h2>
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                {thesisSteps.map((step, index) => (
-                  <div key={step.name} className="flex flex-col items-center text-center">
-                    <div className="flex items-center mb-2">
-                      {step.status === "completed" ? (
-                        <CheckCircle className="h-8 w-8 text-green-600" />
-                      ) : (
-                        <Circle className="h-8 w-8 text-slate-300" />
-                      )}
-                      {index < thesisSteps.length - 1 && <div className="w-16 h-0.5 bg-slate-300 ml-2" />}
-                    </div>
-                    <div className="text-sm font-medium text-slate-700">{step.name}</div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+          {/* Schedule Defense */}
+          <div className="flex items-center justify-between">
+            <span className={`text-lg ${defenseStatus === "Scheduled" ? "text-green-600" : "text-black"}`}>
+              {defenseStatus === "Scheduled" ? "Scheduled" : "Schedule Defence"}
+            </span>
+            <button
+              onClick={handleScheduleDefense}
+              className="w-[250px] py-3 px-6 bg-green-600 text-white font-semibold rounded-md hover:bg-green-700"
+              disabled={defenseStatus === "Scheduled"}
+            >
+              {defenseStatus === "Schedule" ? "Schedule" : "Scheduled"}
+            </button>
+          </div>
         </div>
       </div>
-    </div>
+
+      {/* Thesis Status (Outside the box) */}
+      <div className="mt-8">
+        <h3 className="text-2xl font-semibold text-black mb-4">Thesis Status</h3>
+        <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-2">
+            <div className="w-2.5 h-2.5 rounded-full bg-green-600"></div>
+            <span className="text-lg text-black">Supervisor Selection</span>
+          </div>
+          <div className="w-12 h-0.5 bg-gray-300"></div>
+          <div className="flex items-center space-x-2">
+            <div className="w-2.5 h-2.5 rounded-full bg-green-600"></div>
+            <span className="text-lg text-black">Proposal Submission</span>
+          </div>
+          <div className="w-12 h-0.5 bg-gray-300"></div>
+          <div className="flex items-center space-x-2">
+            <div className="w-2.5 h-2.5 rounded-full bg-green-600"></div>
+            <span className="text-lg text-black">PGC Review</span>
+          </div>
+          <div className="w-12 h-0.5 bg-gray-300"></div>
+          <div className="flex items-center space-x-2">
+            <div className="w-2.5 h-2.5 rounded-full bg-gray-300"></div>
+            <span className="text-lg text-black">CASR Review</span>
+          </div>
+          <div className="w-12 h-0.5 bg-gray-300"></div>
+          <div className="flex items-center space-x-2">
+            <div className="w-2.5 h-2.5 rounded-full bg-gray-300"></div>
+            <span className="text-lg text-black">Thesis Submission</span>
+          </div>
+          <div className="w-12 h-0.5 bg-gray-300"></div>
+          <div className="flex items-center space-x-2">
+            <div className="w-2.5 h-2.5 rounded-full bg-gray-300"></div>
+            <span className="text-lg text-black">Defence Scheduled</span>
+          </div>
+        </div>
+      </div>
+    </main>
   )
 }
