@@ -1,75 +1,55 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-
-const supervisors = [
-  "Aashanan Rahman - Junior Lecturer",
-  "Maliha Nousin Raida - Lecturer",
-  "Abu Raihan Mostofa Kamal - Professor",
-  "Dr. Md. Azam Hossain - Associate Professor",
-]
+import { useState } from "react";
 
 export default function SupervisorPage() {
-  const [selectedSupervisor, setSelectedSupervisor] = useState("")
-  const [supervisorStatus, setSupervisorStatus] = useState("Not Selected")
+  const [supervisorStatus, setSupervisorStatus] = useState("Not Selected");
+  const [supervisor, setSupervisor] = useState("");
 
-  const handleSelectSupervisor = () => {
-    if (selectedSupervisor) {
-      setSupervisorStatus("Selected")
-    }
-  }
+  const handleSupervisorSelect = (selectedSupervisor) => {
+    setSupervisor(selectedSupervisor);
+    setSupervisorStatus("Selected");
+  };
 
   return (
-    <div className="p-8">
-      <h1 className="text-3xl font-bold text-slate-800 mb-8">Supervisor</h1>
+    <main className="flex-1 p-8">
+      <div className="max-w-4xl mx-auto bg-white p-6 rounded-lg shadow-md">
+        {/* Supervisor Section */}
+        <h2 className="text-3xl font-semibold text-black mb-8">Supervisor</h2>
 
-      <div className="space-y-8 max-w-4xl">
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <span className="text-lg font-medium">Select Supervisor</span>
-              <div className="flex items-center gap-4">
-                <Select value={selectedSupervisor} onValueChange={setSelectedSupervisor}>
-                  <SelectTrigger className="w-64">
-                    <SelectValue placeholder="Select" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {supervisors.map((supervisor, index) => (
-                      <SelectItem key={index} value={supervisor}>
-                        {supervisor}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Button
-                  onClick={handleSelectSupervisor}
-                  className="bg-green-600 hover:bg-green-700"
-                  disabled={!selectedSupervisor}
-                >
-                  Select
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <div>
-          <h2 className="text-2xl font-bold text-slate-800 mb-4">Supervisor Status</h2>
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <span className="text-lg font-medium">
-                  {supervisorStatus === "Selected" ? "Selected" : "Not Selected"}
-                </span>
-                {supervisorStatus === "Selected" && <span className="text-slate-800">Maliha Noushin Raida</span>}
-              </div>
-            </CardContent>
-          </Card>
+        {/* Select Supervisor */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <select
+              onChange={(e) => handleSupervisorSelect(e.target.value)}
+              className="w-[250px] py-2 px-6 bg-gray-50 border border-gray-300 rounded-md text-black"
+              defaultValue="Not Selected"
+            >
+              <option value="Not Selected" disabled>
+                Select Supervisor
+              </option>
+              <option value="Aashanan Rahman - Junior Lecturer">Aashanan Rahman - Junior Lecturer</option>
+              <option value="Maliha Nousin Raida - Lecturer">Maliha Nousin Raida - Lecturer</option>
+              <option value="Abu Raihan Mostofa Kamal - Professor">Abu Raihan Mostofa Kamal - Professor</option>
+              <option value="Dr. Md. Azam Hossain - Associate Professor">Dr. Md. Azam Hossain - Associate Professor</option>
+            </select>
+            <button className="bg-green-600 text-white py-2 px-6 rounded-md">
+              {supervisorStatus === "Not Selected" ? "Select" : "Selected"}
+            </button>
+          </div>
         </div>
       </div>
-    </div>
-  )
+
+      {/* New Box for Supervisor Status */}
+      <div className="max-w-4xl mx-auto bg-white p-6 rounded-lg shadow-md mt-8">
+        {/* Supervisor Status */}
+        <div className="flex items-center justify-between mt-4">
+          <span className="text-lg text-gray-800 font-semibold">Supervisor Status</span>
+          <span className="text-lg text-gray-600">
+            {supervisorStatus === "Not Selected" ? supervisorStatus : supervisor}
+          </span>
+        </div>
+      </div>
+    </main>
+  );
 }

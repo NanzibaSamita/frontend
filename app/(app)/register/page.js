@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import Image from "next/image"
+import axios from "axios"
 
 export default function RegisterPage() {
   const [form, setForm] = useState({
@@ -19,9 +20,39 @@ export default function RegisterPage() {
     setForm({ ...form, [e.target.name]: e.target.value })
   }
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
-    alert("Account created successfully!")
+
+    if (form.password !== form.confirmPassword) {
+      alert("Passwords do not match!")
+      return
+    }
+
+    try {
+      const response = await axios.post("http://localhost:5000/api/auth/register", {
+        name: `${form.firstName} ${form.lastName}`,
+        email: form.email,
+        password: form.password,
+        role: "student" // default role for students
+      })
+
+      alert(response.data.message)
+
+      // Reset form
+      setForm({
+        firstName: "",
+        lastName: "",
+        email: "",
+        studentId: "",
+        program: "",
+        department: "",
+        password: "",
+        confirmPassword: ""
+      })
+    } catch (error) {
+      const errorMsg = error.response?.data?.message || "Registration failed"
+      alert(errorMsg)
+    }
   }
 
   return (

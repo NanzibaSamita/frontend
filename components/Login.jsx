@@ -2,15 +2,39 @@
 
 import { useState } from "react"
 import Image from "next/image"
+import axios from "axios"
 
 export default function LoginPage() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [remember, setRemember] = useState(false)
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault()
-    alert(`Logging in as ${email}`)
+
+    try {
+      const response = await axios.post("http://localhost:5000/api/auth/login", {
+        email,
+        password
+      })
+
+
+      console.log(response.data )
+
+      const token = response.data.token
+
+      // Save token to localStorage or cookies
+      localStorage.setItem("token", token)
+
+      alert("Login successful!")
+
+      // Optionally redirect after login
+      router.push("/dashboard") 
+
+    } catch (error) {
+      const errorMsg = error.response?.data?.message || "Login failed"
+      alert(errorMsg)
+    }
   }
 
   return (
@@ -18,7 +42,6 @@ export default function LoginPage() {
       {/* Header with logos and title */}
       <div className="w-full max-w-5xl flex flex-col items-center space-y-4">
         <div className="w-full flex justify-between items-center px-4">
-          {/* Left Logo */}
           <div className="w-[100px] md:w-[140px]">
             <Image
               src="/iut-left.png"
@@ -29,12 +52,10 @@ export default function LoginPage() {
             />
           </div>
 
-          {/* Title */}
           <h1 className="text-xl md:text-4xl font-extrabold text-center flex-1 text-gray-800 leading-tight">
             Postgraduate Academic <br /> Management System
           </h1>
 
-          {/* Right Logo */}
           <div className="w-[100px] md:w-[140px]">
             <Image
               src="/iut-right.png"
@@ -47,7 +68,7 @@ export default function LoginPage() {
         </div>
       </div>
 
-      {/* Login card */}
+      {/* Login Form */}
       <form
         onSubmit={handleLogin}
         className="w-full max-w-sm bg-white p-6 rounded-lg shadow-md space-y-5 mt-[-40px] md:mt-[-60px]"
@@ -93,7 +114,6 @@ export default function LoginPage() {
           Log in
         </button>
 
-        {/* Forgot Password Link */}
         <button
           type="button"
           className="w-full text-sm text-blue-600 hover:underline mt-2"
@@ -102,7 +122,6 @@ export default function LoginPage() {
           Forgot password?
         </button>
 
-        {/* Register Link */}
         <div className="mt-4 text-center">
           <span className="text-gray-500 text-sm">New student? </span>
           <button

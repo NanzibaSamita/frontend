@@ -1,95 +1,65 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-
-const courses = [
-  {
-    code: "CSE5040",
-    title: "Advanced Algorithms",
-    credits: 3,
-    status: "available",
-  },
-  {
-    code: "MATH4041",
-    title: "Numerical Method",
-    credits: 3,
-    status: "enrolled",
-  },
-  {
-    code: "CSE4011",
-    title: "Machine Learning",
-    credits: 3,
-    status: "available",
-  },
-  {
-    code: "PHY4031",
-    title: "Quantum Mechanics",
-    credits: 4,
-    status: "available",
-  },
-  {
-    code: "PHY4031",
-    title: "Software Requirements & System",
-    credits: 2,
-    status: "available",
-  },
-]
+import { useState } from "react";
 
 export default function CoursesPage() {
-  const [courseList, setCourseList] = useState(courses)
+  const [courseStatus, setCourseStatus] = useState({
+    "CSE5040": "Enroll",
+    "MATH4041": "Enroll",
+    "CSE4011": "Enroll",
+    "PHY4031": "Enroll",
+    "PHY4032": "Enroll"
+  });
 
   const handleEnroll = (courseCode) => {
-    setCourseList((prev) =>
-      prev.map((course) => (course.code === courseCode ? { ...course, status: "enrolled" } : course)),
-    )
-  }
+    setCourseStatus(prevStatus => ({
+      ...prevStatus,
+      [courseCode]: "Enrolled"
+    }));
+  };
 
   return (
-    <div className="p-8">
-      <h1 className="text-3xl font-bold text-slate-800 mb-8">Courses</h1>
+    <main className="flex-1 p-8">
+      <div className="max-w-4xl mx-auto bg-white p-6 rounded-lg shadow-md">
+        {/* Courses Section */}
+        <h2 className="text-3xl font-semibold text-black mb-8">Courses</h2>
 
-      <Card className="max-w-6xl">
-        <CardHeader>
-          <CardTitle>Available Courses</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Course Code</TableHead>
-                <TableHead>Title</TableHead>
-                <TableHead>Credits</TableHead>
-                <TableHead>Status</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {courseList.map((course, index) => (
-                <TableRow key={index}>
-                  <TableCell className="font-medium">{course.code}</TableCell>
-                  <TableCell>{course.title}</TableCell>
-                  <TableCell>{course.credits}</TableCell>
-                  <TableCell>
-                    {course.status === "enrolled" ? (
-                      <span className="text-slate-600">Enrolled</span>
-                    ) : (
-                      <Button
-                        size="sm"
-                        className="bg-green-600 hover:bg-green-700"
-                        onClick={() => handleEnroll(course.code)}
-                      >
-                        Enroll
-                      </Button>
-                    )}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
-    </div>
-  )
+        {/* Course Table */}
+        <table className="min-w-full table-auto">
+          <thead>
+            <tr className="bg-gray-100">
+              <th className="px-4 py-2 text-left text-black">Course Code</th>
+              <th className="px-4 py-2 text-left text-black">Title</th>
+              <th className="px-4 py-2 text-left text-black">Credits</th>
+              <th className="px-4 py-2 text-left text-black">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {[
+              { code: "CSE5040", title: "Advanced Algorithms", credits: 3 },
+              { code: "MATH4041", title: "Numerical Method", credits: 3 },
+              { code: "CSE4011", title: "Machine Learning", credits: 3 },
+              { code: "PHY4031", title: "Quantum Mechanics", credits: 4 },
+              { code: "PHY4032", title: "Software Requirements & System", credits: 2 }
+            ].map((course) => (
+              <tr key={course.code}>
+                <td className="px-4 py-2 text-black">{course.code}</td>
+                <td className="px-4 py-2 text-black">{course.title}</td>
+                <td className="px-4 py-2 flex items-center justify-center text-black">{course.credits}</td>
+                <td className="px-4 py-2">
+                  <button
+                    onClick={() => handleEnroll(course.code)}
+                    className={`py-2 px-6 text-white font-semibold rounded-md ${courseStatus[course.code] === "Enrolled" ? "bg-gray-300 cursor-not-allowed" : "bg-green-600 hover:bg-green-700"}`}
+                    disabled={courseStatus[course.code] === "Enrolled"}
+                  >
+                    {courseStatus[course.code]}
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </main>
+  );
 }
