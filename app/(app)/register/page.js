@@ -23,19 +23,28 @@ export default function RegisterPage() {
   const handleSubmit = async (e) => {
     e.preventDefault()
 
+    // Check if passwords match
     if (form.password !== form.confirmPassword) {
       alert("Passwords do not match!")
       return
     }
 
-    try {
-      const response = await axios.post("http://localhost:5000/api/auth/register", {
-        name: `${form.firstName} ${form.lastName}`,
-        email: form.email,
-        password: form.password,
-        role: "student" // default role for students
-      })
+    // Prepare data for submission
+    const userData = {
+      student_id: form.studentId,
+      email: form.email,
+      first_name: form.firstName,
+      last_name: form.lastName,
+      password: form.password,
+      program: form.program,
+      department: form.department,
+    }
 
+    try {
+      // Send POST request to backend API
+      const response = await axios.post("http://localhost:5000/api/auth/register", userData)
+
+      // Display success message from backend
       alert(response.data.message)
 
       // Reset form
@@ -47,9 +56,10 @@ export default function RegisterPage() {
         program: "",
         department: "",
         password: "",
-        confirmPassword: ""
+        confirmPassword: "",
       })
     } catch (error) {
+      // Handle error if any
       const errorMsg = error.response?.data?.message || "Registration failed"
       alert(errorMsg)
     }
