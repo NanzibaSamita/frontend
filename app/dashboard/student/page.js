@@ -6,8 +6,13 @@ export default function StudentDashboardRedirect() {
   const router = useRouter()
 
   useEffect(() => {
-    // Redirect the student to their profile page
-    router.replace("/dashboard/student/profile")
+    const token = localStorage.getItem("token")
+
+    if (token) {
+      router.replace("/dashboard/student/profile")
+    } else {
+      router.replace("/")  // Redirect to login if not authenticated
+    }
   }, [router])
 
   return null

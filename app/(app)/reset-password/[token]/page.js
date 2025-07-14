@@ -1,21 +1,56 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import Image from "next/image"
+import { useState, useEffect } from "react";
+import Image from "next/image";
+import { useRouter } from "next/router"; // To get the token from URL
 
 export default function ChangePasswordPage() {
-  const [password, setPassword] = useState("")
-  const [confirmPassword, setConfirmPassword] = useState("")
-  const [showPassword, setShowPassword] = useState(false)
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [resetToken, setResetToken] = useState(null); // To store the reset token from URL
+  const router = useRouter(); // For accessing the URL params
 
-  const handleSubmit = (e) => {
-    e.preventDefault()
-    alert("Password changed successfully!")
-  }
+  useEffect(() => {
+    // Extract the reset token from the URL
+    const { token } = router.query;
+    if (token) {
+      setResetToken(token);
+    }
+  }, [router.query]);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    if (password !== confirmPassword) {
+      alert("Passwords do not match!");
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/auth/reset-password/${token}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ password }),
+      });
+
+      const data = await response.json();
+      if (response.ok) {
+        alert(data.message || "Password changed successfully!");
+        router.push("/login"); // Redirect to login page after successful reset
+      } else {
+        alert(data.message || "Something went wrong!");
+      }
+    } catch (error) {
+      alert("An error occurred, please try again!");
+      console.error("Error resetting password", error);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-[#f8faf9] flex flex-col items-center justify-start px-4 pt-10 md:pt-16 space-y-10">
-      {/* Header with logos and title */}
       <div className="w-full max-w-5xl flex flex-col items-center space-y-4">
         <div className="w-full flex justify-between items-center px-4">
           {/* Left Logo */}
@@ -92,9 +127,9 @@ export default function ChangePasswordPage() {
           type="submit"
           className="w-full bg-green-600 hover:bg-green-700 text-white py-2 rounded-md font-semibold"
         >
-          Log in
+          Reset Password
         </button>
       </form>
     </div>
-  )
+  );
 }

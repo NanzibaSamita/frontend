@@ -1,20 +1,38 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import Image from "next/image"
-import Link from "next/link"  // Import Link for navigation
+import { useState } from "react";
+import Image from "next/image";
+import Link from "next/link"; // Import Link for navigation
 
 export default function ForgotPasswordPage() {
-  const [email, setEmail] = useState("")
+  const [email, setEmail] = useState("");
 
-  const handleSubmit = (e) => {
-    e.preventDefault()
-    alert("Password reset instructions sent to your email!")
-  }
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    try {
+      const response = await fetch('http://localhost:5000/api/auth/forgot-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email }),
+      });
+
+      const data = await response.json();
+      if (response.ok) {
+        alert(data.message || "Password reset instructions sent to your email!");
+      } else {
+        alert(data.message || "Something went wrong!");
+      }
+    } catch (error) {
+      alert("An error occurred, please try again!");
+      console.error("Error sending password reset email", error);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-[#f8faf9] flex flex-col items-center justify-start px-4 pt-10 md:pt-16 space-y-10">
-      {/* Header with logos and title */}
       <div className="w-full max-w-5xl flex flex-col items-center space-y-4">
         <div className="w-full flex justify-between items-center px-4">
           {/* Left Logo */}
@@ -73,7 +91,6 @@ export default function ForgotPasswordPage() {
         </button>
       </form>
 
-      {/* Back to Login button */}
       <div className="mt-6">
         <Link
           href="/login"  // Link to your login page
@@ -84,5 +101,5 @@ export default function ForgotPasswordPage() {
         </Link>
       </div>
     </div>
-  )
+  );
 }

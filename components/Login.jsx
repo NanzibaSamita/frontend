@@ -1,10 +1,13 @@
 "use client"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"  // ✅ For redirection
 import Image from "next/image"
 import axios from "axios"
 
 export default function LoginPage() {
+  const router = useRouter()  // ✅ Initialize router
+
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [remember, setRemember] = useState(false)
@@ -15,21 +18,18 @@ export default function LoginPage() {
     try {
       const response = await axios.post("http://localhost:5000/api/auth/login", {
         email,
-        password
+        password,
       })
-
-
-      console.log(response.data )
 
       const token = response.data.token
 
-      // Save token to localStorage or cookies
+      // Save token (for example in localStorage)
       localStorage.setItem("token", token)
 
       alert("Login successful!")
 
-      // Optionally redirect after login
-      router.push("/dashboard") 
+      // ✅ Redirect to student profile page
+      router.push("/dashboard/student/profile")
 
     } catch (error) {
       const errorMsg = error.response?.data?.message || "Login failed"
@@ -39,7 +39,7 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-[#f8faf9] flex flex-col items-center justify-start px-4 pt-10 md:pt-16 space-y-10">
-      {/* Header with logos and title */}
+      {/* Header */}
       <div className="w-full max-w-5xl flex flex-col items-center space-y-4">
         <div className="w-full flex justify-between items-center px-4">
           <div className="w-[100px] md:w-[140px]">
