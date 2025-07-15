@@ -121,17 +121,6 @@ export default function LoginPage() {
         >
           Forgot password?
         </button>
-
-        <div className="mt-4 text-center">
-          <span className="text-gray-500 text-sm">New student? </span>
-          <button
-            type="button"
-            className="text-blue-600 hover:underline text-sm font-medium"
-            onClick={() => alert('Redirect to registration!')}
-          >
-            Register here
-          </button>
-        </div>
       </form>
     </div>
   )
