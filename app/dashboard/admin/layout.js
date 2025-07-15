@@ -1,14 +1,7 @@
-import { Inter } from "next/font/google"
-import "./global.css"
-
-const inter = Inter({ subsets: ["latin"] })
-
-export const metadata = {
-  title: "PAMS - Admin Dashboard",
-  description: "Personnel Administration Management System",
-}
-
-export default function RootLayout({ children }) {
+// app/dashboard/student/layout.jsx
+import "./global.css"               // Global styles
+import AdminLayout from "@/components/AdminLayout"
+export default function AdminPageLayout({ children }) {
   return (
     <html lang="en">
       <body className={inter.className}>{children}</body>
