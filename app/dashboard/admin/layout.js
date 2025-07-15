@@ -1,8 +1,7 @@
 // app/dashboard/student/layout.jsx
 import "./global.css"               // Global styles
-import Layout from "@/components/Layout"
 import AdminLayout from "@/components/AdminLayout"
-export default function StudentLayout({ children }) {
+export default function AdminPageLayout({ children }) {
   return (
     <html lang="en">
       <body>
