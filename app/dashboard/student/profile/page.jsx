@@ -40,7 +40,7 @@ export default function StudentProfile() {
         </div>
 
         {/* Button OUTSIDE the white box */}
-        <div className="mt-6 flex ">
+        <div className="mt-6 flex justify-center">
           <button className="bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-8 rounded-lg shadow-md transition">
             Change Password
           </button>

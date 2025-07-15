@@ -1,17 +1,12 @@
-// components/Layout.jsx
 "use client"
 
 import AdminSidebar from "./admin-sidebar"
+
 export default function AdminLayout({ children }) {
   return (
-    <div className="flex min-h-screen">
-      {/* Sidebar - visible on all dashboard pages */}
+    <div className="flex min-h-screen bg-gray-50">
       <AdminSidebar />
-
-      {/* Main content area */}
-      <main className="flex-1 bg-[#f8faf9] p-6 overflow-auto">
-        {children}
-      </main>
+      <main className="flex-1">{children}</main>
     </div>
   )
 }

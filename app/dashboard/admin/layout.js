@@ -1,13 +1,17 @@
-// app/dashboard/student/layout.jsx
-import "./global.css"               // Global styles
-import Layout from "@/components/Layout"
-import AdminLayout from "@/components/AdminLayout"
-export default function StudentLayout({ children }) {
+import { Inter } from "next/font/google"
+import "./global.css"
+
+const inter = Inter({ subsets: ["latin"] })
+
+export const metadata = {
+  title: "PAMS - Admin Dashboard",
+  description: "Personnel Administration Management System",
+}
+
+export default function RootLayout({ children }) {
   return (
     <html lang="en">
-      <body>
-        <AdminLayout>{children}</AdminLayout>
-      </body>
+      <body className={inter.className}>{children}</body>
     </html>
   )
 }

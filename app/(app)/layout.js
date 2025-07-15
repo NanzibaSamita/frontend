@@ -1,16 +1,16 @@
-import "./globals.css";
+import { Inter } from "next/font/google"
+
+const inter = Inter({ subsets: ["latin"] })
+
 export const metadata = {
-  title: "My Next.js App",
-  description: "A modern web app built with Next.js",
-};
+  title: "PAMS - Admin Dashboard",
+  description: "Personnel Administration Management System",
+}
 
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
-      <head />
-      <body className="min-h-screen bg-gray-50 text-gray-900 ">
-        <main className="p-6">{children}</main>
-      </body>
+      <body className={inter.className}>{children}</body>
     </html>
-  );
+  )
 }
