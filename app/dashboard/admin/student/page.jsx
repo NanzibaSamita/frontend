@@ -1,165 +1,107 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import axios from "axios"
+import { useState } from "react";
+import AdminSidebar from "@/components/admin-sidebar";
+import { useRouter } from "next/navigation";
+import axios from "axios";
 
-export default function AdminStudentRegister() {
-  const [form, setForm] = useState({
-    firstName: "",
-    lastName: "",
+export default function AddStudentPage() {
+  const [studentData, setStudentData] = useState({
+    user_id: "",
     email: "",
-    studentId: "",
+    first_name: "",
+    last_name: "",
     program: "",
     department: "",
-    currentAY: "",
-  })
+    academic_year: "",
+  });
 
+  const router = useRouter();
+
+  // Handle input change
   const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value })
-  }
+    setStudentData({ ...studentData, [e.target.name]: e.target.value });
+  };
 
+  // Handle form submission
   const handleSubmit = async (e) => {
-    e.preventDefault()
-
-    const studentData = {
-      student_id: form.studentId,
-      email: form.email,
-      first_name: form.firstName,
-      last_name: form.lastName,
-      program: form.program,
-      department: form.department,
-      current_ay: form.currentAY,
-    }
+    e.preventDefault();
 
     try {
-      const response = await axios.post("http://localhost:5000/api/admin/register-student", studentData)
-      alert(response.data.message)
+      const token = localStorage.getItem("token"); // ✅ make sure token was saved at login
 
-      setForm({
-        firstName: "",
-        lastName: "",
-        email: "",
-        studentId: "",
-        program: "",
-        department: "",
-        currentAY: "",
-      })
+      if (!token) {
+        alert("You must be logged in as admin to perform this action.");
+        return;
+      }
+
+      const response = await axios.post(
+        "http://localhost:5000/api/admin/create-student", // or /api/admin/create-student if that's your actual path
+        studentData,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`, // ✅ Attach token to request
+          },
+        }
+      );
+
+      console.log(response.data);
+      alert("Student created successfully!");
+      router.push("/dashboard/admin/student/list");
     } catch (error) {
-      const errorMsg = error.response?.data?.message || "Registration failed"
-      alert(errorMsg)
+      console.error("Error creating student:", error);
+
+      if (error.response?.status === 401) {
+        alert("Unauthorized. Please login again as admin.");
+      } else if (error.response?.status === 403) {
+        alert("Forbidden. You are not authorized to create students.");
+      } else if (error.response?.status === 409) {
+        alert("User already exists.");
+      } else {
+        alert("Error creating student. Please try again.");
+      }
     }
-  }
+  };
 
   return (
-    <div className="min-h-screen bg-[#f8faf9] flex flex-col items-center justify-start px-4 pt-10 md:pt-16 space-y-6">
-      <h1 className="text-4xl font-bold text-black mb-8">Add Student</h1>
-
-      <form
-        onSubmit={handleSubmit}
-        className="w-full max-w-3xl bg-white p-8 rounded-lg shadow-md space-y-6 -mt-20 md:-mt-28"
-      >
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700">First Name</label>
-            <input
-              type="text"
-              name="firstName"
-              value={form.firstName}
-              onChange={handleChange}
-              className="w-full px-4 py-2 border rounded-md focus:ring-green-400"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Last Name</label>
-            <input
-              type="text"
-              name="lastName"
-              value={form.lastName}
-              onChange={handleChange}
-              className="w-full px-4 py-2 border rounded-md focus:ring-green-400"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Email</label>
-            <input
-              type="email"
-              name="email"
-              value={form.email}
-              onChange={handleChange}
-              className="w-full px-4 py-2 border rounded-md focus:ring-green-400"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Student ID</label>
-            <input
-              type="text"
-              name="studentId"
-              value={form.studentId}
-              onChange={handleChange}
-              className="w-full px-4 py-2 border rounded-md focus:ring-green-400"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Program</label>
-            <select
-              name="program"
-              value={form.program}
-              onChange={handleChange}
-              className="w-full px-4 py-2 border rounded-md focus:ring-green-400"
-              required
-            >
-              <option value="">Select Program</option>
-              <option value="MSc">MSc</option>
-              <option value="MEng">MEng</option>
-              <option value="PhD">PhD</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Department</label>
-            <select
-              name="department"
-              value={form.department}
-              onChange={handleChange}
-              className="w-full px-4 py-2 border rounded-md focus:ring-green-400"
-              required
-            >
-              <option value="">Select Department</option>
-              <option value="CSE">CSE</option>
-              <option value="EEE">EEE</option>
-              <option value="MCE">MCE</option>
-              <option value="CEE">CEE</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Current AY</label>
-            <input
-              type="text"
-              name="currentAY"
-              value={form.currentAY}
-              onChange={handleChange}
-              className="w-full px-4 py-2 border rounded-md focus:ring-green-400"
-              required
-            />
-          </div>
+    <div className="flex">
+      <div className="flex-1 p-10">
+        <h1 className="text-4xl font-bold text-black mb-8">Add Student</h1>
+        <div className="bg-white rounded-lg shadow-md p-8 max-w-4xl mx-auto">
+          <h2 className="text-xl font-semibold mb-6">Total Students: 120</h2>
+          <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {[
+              ["First Name", "first_name"],
+              ["Last Name", "last_name"],
+              ["Student ID", "user_id"],
+              ["Email Address", "email"],
+              ["Department", "department"],
+              ["Program", "program"],
+              ["Current AY", "academic_year"],
+            ].map(([label, name]) => (
+              <div key={name} className="flex flex-col">
+                <label className="text-sm font-medium text-gray-700">{label}</label>
+                <input
+                  type="text"
+                  name={name}
+                  value={studentData[name]}
+                  onChange={handleChange}
+                  className="mt-2 p-3 border border-gray-300 rounded-md"
+                  required
+                />
+              </div>
+            ))}
+            <div className="md:col-span-2 mt-4 text-right">
+              <button
+                type="submit"
+                className="bg-green-600 text-white py-3 px-6 rounded-lg hover:bg-green-700"
+              >
+                Submit
+              </button>
+            </div>
+          </form>
         </div>
-
-        <button
-          type="submit"
-          className="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-md font-semibold text-lg"
-        >
-          Submit
-        </button>
-      </form>
+      </div>
     </div>
-  )
+  );
 }

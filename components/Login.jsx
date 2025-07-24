@@ -30,7 +30,6 @@ export default function LoginPage() {
       const decoded = jwtDecode(token);
       const role = decoded.role;
 
-      alert("Login successful!");
 
       // Redirect based on role
       if (role === "Student") {

@@ -25,7 +25,7 @@ export default function AdminAuth({ children }) {
     const token = localStorage.getItem("token");
 
     if (!token) {
-      router.push("/login");
+      router.push("/");
       return;
     }
 
@@ -49,7 +49,7 @@ export default function AdminAuth({ children }) {
         router.push("/dashboard/pgc"); // adjust if CASR has own route
         break;
       default:
-        router.push("/login");
+        router.push("/");
     }
   }, [router]);
 
