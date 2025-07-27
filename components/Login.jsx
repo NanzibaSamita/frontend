@@ -16,7 +16,11 @@ export default function LoginPage() {
     e.preventDefault();
 
     try {
+<<<<<<< HEAD
       const response = await axios.post("http://localhost:5000/api/auth/login", { 
+=======
+      const response = await axios.post("http://localhost:8080/api/auth/login", {
+>>>>>>> 58d541d (Made updates)
         email,
         password,
       });
