@@ -1,12 +1,20 @@
-"use client"
+"use client";
 
-import Link from "next/link"
-import { usePathname, useRouter } from "next/navigation"
-import { BookOpen, Users, FileCheck, FileText, User, ChevronUp, LogOut } from "lucide-react"
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
+import {
+  BookOpen,
+  Users,
+  FileCheck,
+  FileText,
+  User,
+  ChevronUp,
+  LogOut,
+} from "lucide-react";
 
 export default function FacultySidebar() {
-  const pathname = usePathname()
-  const router = useRouter()
+  const pathname = usePathname();
+  const router = useRouter();
 
   const navigationItems = [
     {
@@ -29,12 +37,12 @@ export default function FacultySidebar() {
       href: "/dashboard/faculty/thesis-approvals",
       icon: <FileText size={18} />,
     },
-  ]
+  ];
 
   const handleLogout = () => {
-    localStorage.removeItem("token")
-    router.push("/")
-  }
+    localStorage.removeItem("token");
+    router.push("/");
+  };
 
   return (
     <div className="w-80 bg-gray-900 text-white relative">
@@ -49,7 +57,7 @@ export default function FacultySidebar() {
           <Link
             key={item.name}
             href={item.href}
-            className={`block px-4 py-4 hover:bg-gray-800 cursor-pointer flex items-center text-white rounded mb-2 transition-colors ${
+            className={` px-4 py-4 hover:bg-gray-800 cursor-pointer flex items-center text-white rounded mb-2 transition-colors ${
               pathname === item.href ? "bg-gray-800" : ""
             }`}
           >
@@ -63,8 +71,10 @@ export default function FacultySidebar() {
       <div className="absolute bottom-16 left-4 right-4">
         <Link
           href="/dashboard/faculty/profile"
-          className={`block px-4 py-3 cursor-pointer flex items-center text-white rounded transition-colors ${
-            pathname === "/dashboard/faculty/profile" ? "bg-gray-700" : "bg-gray-800 hover:bg-gray-700"
+          className={` px-4 py-3 cursor-pointer flex items-center text-white rounded transition-colors ${
+            pathname === "/dashboard/faculty/profile"
+              ? "bg-gray-700"
+              : "bg-gray-800 hover:bg-gray-700"
           }`}
         >
           <span className="mr-4">
@@ -88,5 +98,5 @@ export default function FacultySidebar() {
         </button>
       </div>
     </div>
-  )
+  );
 }

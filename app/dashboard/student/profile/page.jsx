@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 export default function StudentProfile() {
   return (
@@ -8,24 +8,32 @@ export default function StudentProfile() {
         <h1 className="text-4xl font-bold text-black mb-8">Profile</h1>
 
         {/* White Card */}
-        <div className="bg-white rounded-lg shadow-md p-8 max-w-4xl mx-auto">
+        <div className="bg-white 'border border-gray-300 rounded-lg shadow-md p-8 max-w-4xl mx-auto">
           <table className="w-full text-sm md:text-base">
             <tbody>
               <tr className="border-b">
                 <td className="font-medium py-4 text-gray-700">Full Name:</td>
-                <td className="py-4 text-gray-800 text-right">Sadika Tabassum</td>
+                <td className="py-4 text-gray-800 text-right">
+                  Sadika Tabassum
+                </td>
               </tr>
               <tr className="border-b">
                 <td className="font-medium py-4 text-gray-700">Student ID:</td>
                 <td className="py-4 text-gray-800 text-right">220042147</td>
               </tr>
               <tr className="border-b">
-                <td className="font-medium py-4 text-gray-700">Email Address:</td>
-                <td className="py-4 text-gray-800 text-right">sadikatabassum@iut-dhaka.edu</td>
+                <td className="font-medium py-4 text-gray-700">
+                  Email Address:
+                </td>
+                <td className="py-4 text-gray-800 text-right">
+                  sadikatabassum@iut-dhaka.edu
+                </td>
               </tr>
               <tr className="border-b">
                 <td className="font-medium py-4 text-gray-700">Department:</td>
-                <td className="py-4 text-gray-800 text-right">Computer Science and Engineering</td>
+                <td className="py-4 text-gray-800 text-right">
+                  Computer Science and Engineering
+                </td>
               </tr>
               <tr className="border-b">
                 <td className="font-medium py-4 text-gray-700">Program:</td>
@@ -47,5 +55,5 @@ export default function StudentProfile() {
         </div>
       </main>
     </div>
-  )
+  );
 }
