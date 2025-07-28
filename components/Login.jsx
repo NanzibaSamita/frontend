@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import axios from "axios";
-import {jwtDecode} from "jwt-decode"; // ⬅️ Make sure this is installed: `npm install jwt-decode`
+import { jwtDecode } from "jwt-decode"; // ⬅️ Make sure this is installed: `npm install jwt-decode`
 
 export default function LoginPage() {
   const router = useRouter();
@@ -16,10 +16,13 @@ export default function LoginPage() {
     e.preventDefault();
 
     try {
-      const response = await axios.post("http://localhost:5000/api/auth/login", {
-        email,
-        password,
-      });
+      const response = await axios.post(
+        "http://localhost:8080/api/auth/login",
+        {
+          email,
+          password,
+        }
+      );
 
       const token = response.data.token;
 
@@ -45,7 +48,6 @@ export default function LoginPage() {
       } else {
         alert("Unknown role. Please contact support.");
       }
-
     } catch (error) {
       const errorMsg = error.response?.data?.message || "Login failed";
       alert(errorMsg);
@@ -58,7 +60,13 @@ export default function LoginPage() {
       <div className="w-full max-w-5xl flex flex-col items-center space-y-4">
         <div className="w-full flex justify-between items-center px-4">
           <div className="w-[100px] md:w-[140px]">
-            <Image src="/iut-left.png" alt="IUT Left Logo" width={140} height={140} className="w-full h-auto" />
+            <Image
+              src="/iut-left.png"
+              alt="IUT Left Logo"
+              width={140}
+              height={140}
+              className="w-full h-auto"
+            />
           </div>
 
           <h1 className="text-xl md:text-4xl font-extrabold text-center flex-1 text-gray-800 leading-tight">
@@ -66,14 +74,25 @@ export default function LoginPage() {
           </h1>
 
           <div className="w-[100px] md:w-[140px]">
-            <Image src="/iut-right.png" alt="IUT Right Logo" width={140} height={140} className="w-full h-auto" />
+            <Image
+              src="/iut-right.png"
+              alt="IUT Right Logo"
+              width={140}
+              height={140}
+              className="w-full h-auto"
+            />
           </div>
         </div>
       </div>
 
       {/* Login Form */}
-      <form onSubmit={handleLogin} className="w-full max-w-sm bg-white p-6 rounded-lg shadow-md space-y-5 mt-[-40px] md:mt-[-60px]">
-        <h2 className="text-center text-2xl font-semibold text-gray-800">Login</h2>
+      <form
+        onSubmit={handleLogin}
+        className="w-full max-w-sm bg-white p-6 rounded-md border border-gray-300 space-y-5 mt-[-40px] md:mt-[-60px]"
+      >
+        <h2 className="text-center text-2xl font-semibold text-gray-800">
+          Login
+        </h2>
 
         <div className="space-y-1">
           <label className="block text-sm text-gray-700">Email Address</label>
@@ -81,7 +100,7 @@ export default function LoginPage() {
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-green-400"
+            className="w-full px-4 py-2 border border-gray-300 rounded-sm focus:ring-2 focus:ring-green-500 focus:outline-none"
             required
           />
         </div>
@@ -92,12 +111,12 @@ export default function LoginPage() {
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-green-400"
+            className="w-full px-4 py-2 border border-gray-300 rounded-sm focus:ring-2 focus:ring-green-500 focus:outline-none"
             required
           />
         </div>
 
-        <label className="flex items-center text-sm space-x-2 text-gray-600">
+        <label className="flex items-center text-sm text-gray-600 space-x-2">
           <input
             type="checkbox"
             checked={remember}
@@ -107,16 +126,11 @@ export default function LoginPage() {
           <span>Remember me</span>
         </label>
 
-        <button type="submit" className="w-full bg-green-600 hover:bg-green-700 text-white py-2 rounded-md font-semibold">
-          Log in
-        </button>
-
         <button
-          type="button"
-          className="w-full text-sm text-blue-600 hover:underline mt-2"
-          onClick={() => router.push("/forgot-password")}
+          type="submit"
+          className="w-full bg-green-600 hover:bg-green-700 text-white py-2 rounded-sm font-semibold"
         >
-          Forgot password?
+          Log in
         </button>
       </form>
     </div>

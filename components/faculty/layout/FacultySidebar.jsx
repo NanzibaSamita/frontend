@@ -3,36 +3,41 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
-  GraduationCap,
-  FileText,
+  BookOpen,
   Users,
-  BookText,
-  LogOut,
+  FileCheck,
+  FileText,
   User,
-  ChevronDown,
   ChevronUp,
+  ChevronDown,
+  LogOut,
 } from "lucide-react";
 import { useState } from "react";
 
-export default function StudentSidebar() {
+export default function FacultySidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const [showLogout, setShowLogout] = useState(false);
 
-  const links = [
+  const navigationItems = [
     {
-      name: "Courses",
-      href: "/dashboard/student/course",
-      icon: <BookText size={18} />,
+      name: "Course Content",
+      href: "/dashboard/faculty/course",
+      icon: <BookOpen size={18} />,
     },
     {
-      name: "Supervisor",
-      href: "/dashboard/student/supervisor",
-      icon: <GraduationCap size={18} />,
+      name: "Supervision Requests",
+      href: "/dashboard/faculty/supervision",
+      icon: <Users size={18} />,
     },
     {
-      name: "Thesis",
-      href: "/dashboard/student/thesis",
+      name: "Thesis Proposal Approvals",
+      href: "/dashboard/faculty/thesis-proposals",
+      icon: <FileCheck size={18} />,
+    },
+    {
+      name: "Thesis Approvals",
+      href: "/dashboard/faculty/thesis-approvals",
       icon: <FileText size={18} />,
     },
   ];
@@ -47,8 +52,8 @@ export default function StudentSidebar() {
       {/* Top Section */}
       <div>
         <h2 className="text-2xl font-bold mb-8">PAMS</h2>
-        <nav className="flex flex-col space-y-6">
-          {links.map(({ name, href, icon }) => (
+        <nav className="flex flex-col space-y-2">
+          {navigationItems.map(({ name, href, icon }) => (
             <Link
               key={name}
               href={href}
@@ -63,21 +68,22 @@ export default function StudentSidebar() {
         </nav>
       </div>
 
-      {/* Bottom Section: Profile + Logout */}
       <div>
+        {/* Logout button shown only when toggled */}
         {showLogout && (
           <button
             onClick={handleLogout}
-            className="mb-2 w-full flex items-center gap-2 px-3 py-2 rounded-md hover:bg-red-600 transition bg-red-500 text-white font-semibold"
+            className="mt-2 w-full flex items-center gap-2 px-3 py-2 rounded-md hover:bg-red-600 transition bg-red-500 text-white font-semibold"
           >
             <LogOut size={18} />
             <span>Logout</span>
           </button>
         )}
 
+        {/* Profile row — always visible */}
         <div className="w-full flex items-center justify-between px-3 py-2 rounded-md bg-gray-700 hover:bg-gray-600 transition">
           <Link
-            href="/dashboard/student/profile"
+            href="/dashboard/faculty/profile"
             className="flex items-center gap-2 text-white"
           >
             <User size={18} />
