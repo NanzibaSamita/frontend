@@ -9,13 +9,11 @@ export default function AdminSidebar() {
   const router = useRouter();
 
   const links = [
-    { name: "Profile", href: "/dashboard/admin", icon: <Users size={18} /> },
-    { name: "Add Student", href: "/dashboard/admin/student/register", icon: <Database size={18} /> },
-    { name: "Add Faculty", href: "/dashboard/admin/faculty/register", icon: <Database size={18} /> },
-    { name: "Add PGC Member", href: "/dashboard/admin/pgc/register", icon: <Database size={18} /> },
-    { name: "View Students", href: "/dashboard/admin/student/list", icon: <FileText size={18} /> },
-    { name: "View Faculties", href: "/dashboard/admin/faculty/list", icon: <FileText size={18} /> },
-    { name: "View PGC", href: "/dashboard/admin/pgc/list", icon: <FileText size={18} /> },
+    { name: "Profile", href: "/dashboard/admin/profile", icon: <Users size={18} /> },
+    { name: "Add Student", href: "/dashboard/admin/student", icon: <Database size={18} /> },
+    { name: "Add Faculty", href: "/dashboard/admin/faculty", icon: <Database size={18} /> },
+    { name: "Add PGC Member", href: "/dashboard/admin/pgc", icon: <Database size={18} /> },
+  
   ];
 
   const handleLogout = () => {
