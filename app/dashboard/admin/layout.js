@@ -4,9 +4,7 @@ import AdminLayout from "@/components/AdminLayout"
 export default function AdminPageLayout({ children }) {
   return (
     <html lang="en">
-
-      <body ><AdminLayout>{children}
-        </AdminLayout></body>
+      <body className={inter.className}>{children}</body>
     </html>
   )
 }
