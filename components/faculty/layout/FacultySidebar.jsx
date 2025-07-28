@@ -9,12 +9,15 @@ import {
   FileText,
   User,
   ChevronUp,
+  ChevronDown,
   LogOut,
 } from "lucide-react";
+import { useState } from "react";
 
 export default function FacultySidebar() {
   const pathname = usePathname();
   const router = useRouter();
+  const [showLogout, setShowLogout] = useState(false);
 
   const navigationItems = [
     {
@@ -45,58 +48,52 @@ export default function FacultySidebar() {
   };
 
   return (
-    <div className="w-80 bg-gray-900 text-white relative">
-      {/* PAMS Header */}
-      <div className="p-8 pt-12">
-        <h1 className="text-4xl font-bold text-white">PAMS</h1>
+    <aside className="bg-gray-800 text-white min-h-screen w-56 p-4 flex flex-col justify-between">
+      {/* Top Section */}
+      <div>
+        <h2 className="text-2xl font-bold mb-8">PAMS</h2>
+        <nav className="flex flex-col space-y-2">
+          {navigationItems.map(({ name, href, icon }) => (
+            <Link
+              key={name}
+              href={href}
+              className={`flex items-center gap-2 px-3 py-2 rounded-md hover:bg-gray-700 transition ${
+                pathname.startsWith(href) ? "bg-gray-700" : ""
+              }`}
+            >
+              {icon}
+              <span>{name}</span>
+            </Link>
+          ))}
+        </nav>
       </div>
 
-      {/* Navigation Menu */}
-      <nav className="mt-8 px-4">
-        {navigationItems.map((item) => (
-          <Link
-            key={item.name}
-            href={item.href}
-            className={` px-4 py-4 hover:bg-gray-800 cursor-pointer flex items-center text-white rounded mb-2 transition-colors ${
-              pathname === item.href ? "bg-gray-800" : ""
-            }`}
+      <div>
+        {/* Logout button shown only when toggled */}
+        {showLogout && (
+          <button
+            onClick={handleLogout}
+            className="mt-2 w-full flex items-center gap-2 px-3 py-2 rounded-md hover:bg-red-600 transition bg-red-500 text-white font-semibold"
           >
-            <span className="mr-4">{item.icon}</span>
-            <span className="text-lg">{item.name}</span>
-          </Link>
-        ))}
-      </nav>
+            <LogOut size={18} />
+            <span>Logout</span>
+          </button>
+        )}
 
-      {/* Profile Section at Bottom */}
-      <div className="absolute bottom-16 left-4 right-4">
-        <Link
-          href="/dashboard/faculty/profile"
-          className={` px-4 py-3 cursor-pointer flex items-center text-white rounded transition-colors ${
-            pathname === "/dashboard/faculty/profile"
-              ? "bg-gray-700"
-              : "bg-gray-800 hover:bg-gray-700"
-          }`}
-        >
-          <span className="mr-4">
+        {/* Profile row — always visible */}
+        <div className="w-full flex items-center justify-between px-3 py-2 rounded-md bg-gray-700 hover:bg-gray-600 transition">
+          <Link
+            href="/dashboard/faculty/profile"
+            className="flex items-center gap-2 text-white"
+          >
             <User size={18} />
-          </span>
-          <span className="text-lg">Profile</span>
-          <span className="ml-auto">
-            <ChevronUp size={16} />
-          </span>
-        </Link>
+            <span>Profile</span>
+          </Link>
+          <button onClick={() => setShowLogout((prev) => !prev)}>
+            {showLogout ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+          </button>
+        </div>
       </div>
-
-      {/* Logout Button */}
-      <div className="absolute bottom-4 left-4 right-4">
-        <button
-          onClick={handleLogout}
-          className="w-full flex items-center gap-2 px-4 py-3 rounded-md hover:bg-red-600 transition bg-red-500 text-white font-semibold"
-        >
-          <LogOut size={18} />
-          <span>Logout</span>
-        </button>
-      </div>
-    </div>
+    </aside>
   );
 }
