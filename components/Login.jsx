@@ -1,59 +1,41 @@
-"use client";
+"use client"
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import Image from "next/image";
-import axios from "axios";
-import { jwtDecode } from "jwt-decode"; // ⬅️ Make sure this is installed: `npm install jwt-decode`
+import { useState } from "react"
+import { useRouter } from "next/navigation"  // ✅ For redirection
+import Image from "next/image"
+import axios from "axios"
 
 export default function LoginPage() {
-  const router = useRouter();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [remember, setRemember] = useState(false);
+  const router = useRouter()  // ✅ Initialize router
+
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
+  const [remember, setRemember] = useState(false)
 
   const handleLogin = async (e) => {
-    e.preventDefault();
-
+    e.preventDefault()
+    console.log(email, password)
     try {
-      const response = await axios.post(
-        "http://localhost:8080/api/auth/login",
-        {
-          email,
-          password,
-        }
-      );
+      const response = await axios.post("http://localhost:8080/api/auth/login", {
+        email,
+        password,
+      })
 
-      const token = response.data.token;
+      const token = response.data.token
 
-      // Save token
-      localStorage.setItem("token", token);
+      // Save token (for example in localStorage)
+      localStorage.setItem("token", token)
 
-      // Decode token to get user role
-      const decoded = jwtDecode(token);
-      const role = decoded.role;
+      alert("Login successful!")
 
-      alert("Login successful!");
+      // ✅ Redirect to student profile page
+      router.push("/dashboard/student/profile")
 
-      // Redirect based on role
-      if (role === "Student") {
-        router.push("/dashboard/student/profile");
-      } else if (role === "Admin") {
-        router.push("/dashboard/admin");
-      } else if (role === "Faculty") {
-        router.push("/dashboard/faculty");
-      } else if (role === "PGC") {
-        router.push("/dashboard/pgc");
-      } else if (role === "CASR") {
-        router.push("/dashboard/casr");
-      } else {
-        alert("Unknown role. Please contact support.");
-      }
     } catch (error) {
-      const errorMsg = error.response?.data?.message || "Login failed";
-      alert(errorMsg);
+      const errorMsg = error.response?.data?.message || "Login failed"
+      alert(errorMsg)
     }
-  };
+  }
 
   return (
     <div className="min-h-screen bg-[#f8faf9] flex flex-col items-center justify-start px-4 pt-10 md:pt-16 space-y-10">
@@ -89,11 +71,9 @@ export default function LoginPage() {
       {/* Login Form */}
       <form
         onSubmit={handleLogin}
-        className="w-full max-w-sm bg-white p-6 rounded-md border border-gray-300 space-y-5 mt-[-40px] md:mt-[-60px]"
+        className="w-full max-w-sm bg-white p-6 rounded-lg shadow-md space-y-5 mt-[-40px] md:mt-[-60px]"
       >
-        <h2 className="text-center text-2xl font-semibold text-gray-800">
-          Login
-        </h2>
+        <h2 className="text-center text-2xl font-semibold text-gray-800">Login</h2>
 
         <div className="space-y-1">
           <label className="block text-sm text-gray-700">Email Address</label>
@@ -101,7 +81,7 @@ export default function LoginPage() {
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-sm focus:ring-2 focus:ring-green-500 focus:outline-none"
+            className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-green-400"
             required
           />
         </div>
@@ -112,12 +92,12 @@ export default function LoginPage() {
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-sm focus:ring-2 focus:ring-green-500 focus:outline-none"
+            className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-green-400"
             required
           />
         </div>
 
-        <label className="flex items-center text-sm text-gray-600 space-x-2">
+        <label className="flex items-center text-sm space-x-2 text-gray-600">
           <input
             type="checkbox"
             checked={remember}
@@ -129,11 +109,30 @@ export default function LoginPage() {
 
         <button
           type="submit"
-          className="w-full bg-green-600 hover:bg-green-700 text-white py-2 rounded-sm font-semibold"
+          className="w-full bg-green-600 hover:bg-green-700 text-white py-2 rounded-md font-semibold"
         >
           Log in
         </button>
+
+        <button
+          type="button"
+          className="w-full text-sm text-blue-600 hover:underline mt-2"
+          onClick={() => alert('Forgot password clicked!')}
+        >
+          Forgot password?
+        </button>
+
+        <div className="mt-4 text-center">
+          <span className="text-gray-500 text-sm">New student? </span>
+          <button
+            type="button"
+            className="text-blue-600 hover:underline text-sm font-medium"
+            onClick={() => alert('Redirect to registration!')}
+          >
+            Register here
+          </button>
+        </div>
       </form>
     </div>
-  );
+  )
 }
