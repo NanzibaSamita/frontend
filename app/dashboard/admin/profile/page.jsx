@@ -17,9 +17,8 @@ export default function AdminProfilePage() {
     // 3. Simulate fetching user info from token (or optional API call)
     // NOTE: This assumes your token includes `email`, `role`, etc.
     setUser({
-        first_name: decoded.first_name,            // Assuming field exists
+      first_name: decoded.first_name,            // Assuming field exists
       last_name: decoded.last_name,    
-      
       employeeId: decoded.employeeId ,
       email: decoded.email ,
       role: decoded.role ,
@@ -73,7 +72,7 @@ export default function AdminProfilePage() {
 
           <div className="px-10 py-6">
             <div className="flex justify-between text-lg">
-              <span className="font-semibold">Join Date:</span>
+              <span className="font-semibold">Department:</span>
               <span>{user.department}</span>
             </div>
           </div>
