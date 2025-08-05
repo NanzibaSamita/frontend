@@ -1,6 +1,6 @@
-'use client';
-import { useEffect, useState } from 'react';
-import { jwtDecode } from 'jwt-decode';
+"use client";
+import { useEffect, useState } from "react";
+import { jwtDecode } from "jwt-decode";
 import AdminSidebar from "@/components/admin-sidebar";
 
 export default function AdminProfilePage() {
@@ -8,7 +8,7 @@ export default function AdminProfilePage() {
 
   useEffect(() => {
     // 1. Get token
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem("token");
     if (!token) return;
 
     // 2. Decode it
@@ -17,12 +17,13 @@ export default function AdminProfilePage() {
     // 3. Simulate fetching user info from token (or optional API call)
     // NOTE: This assumes your token includes `email`, `role`, etc.
     setUser({
-      first_name: decoded.first_name,            // Assuming field exists
-      last_name: decoded.last_name,    
-      employeeId: decoded.employeeId ,
-      email: decoded.email ,
-      role: decoded.role ,
-      department: decoded.department
+      first_name: decoded.first_name, // Assuming field exists
+      last_name: decoded.last_name,
+
+      employeeId: decoded.employeeId,
+      email: decoded.email,
+      role: decoded.role,
+      department: decoded.department,
     });
   }, []);
   console.log(user);
@@ -45,7 +46,9 @@ export default function AdminProfilePage() {
           <div className="border-b px-10 py-6">
             <div className="flex justify-between text-lg">
               <span className="font-semibold">Full Name:</span>
-              <span>{user.first_name}{" "}{user.last_name} </span>
+              <span>
+                {user.first_name} {user.last_name}{" "}
+              </span>
             </div>
           </div>
 
@@ -72,7 +75,7 @@ export default function AdminProfilePage() {
 
           <div className="px-10 py-6">
             <div className="flex justify-between text-lg">
-              <span className="font-semibold">Department:</span>
+              <span className="font-semibold">Join Date:</span>
               <span>{user.department}</span>
             </div>
           </div>
