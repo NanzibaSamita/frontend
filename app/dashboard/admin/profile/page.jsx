@@ -1,93 +1,88 @@
 "use client";
 import { useEffect, useState } from "react";
-import { jwtDecode } from "jwt-decode";
-import AdminSidebar from "@/components/admin-sidebar";
+import AdminSidebar from "@/components/admin-sidebar"; // Optional: keep if you use a sidebar
 
-export default function AdminProfilePage() {
-  const [user, setUser] = useState(null);
+export default function AdminStudentsPage() {
+  const [students, setStudents] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // 1. Get token
-    const token = localStorage.getItem("token");
-    if (!token) return;
-
-    // 2. Decode it
-    const decoded = jwtDecode(token);
-    console.log(decoded)
-    // 3. Simulate fetching user info from token (or optional API call)
-    // NOTE: This assumes your token includes `email`, `role`, etc.
-    setUser({
-      first_name: decoded.first_name, // Assuming field exists
-      last_name: decoded.last_name,
-
-      employeeId: decoded.user_id,
-      email: decoded.email,
-      role: decoded.role,
-      department: decoded.department,
-    });
+    fetch("http://localhost:8080/api/admin/students")
+      .then((res) => res.json())
+      .then((data) => {
+        setStudents(data.students || data); // Adjust if your API response is different
+        setLoading(false);
+      })
+      .catch((err) => {
+        setLoading(false);
+        alert("Failed to fetch students");
+      });
   }, []);
-  console.log(user);
-  if (!user) {
+
+  if (loading) {
     return (
       <div className="flex h-screen items-center justify-center text-xl">
-        Loading profile...
+        Loading students...
       </div>
     );
   }
 
   return (
-    <div className="flex h-screen ">
-      
+    <div className="flex h-screen bg-gray-100">
+      {/* <AdminSidebar /> */}
 
       <main className="flex-1 p-10">
-        <h1 className="text-3xl font-bold mb-8">Profile</h1>
+        <h1 className="text-3xl font-bold mb-8">All Students</h1>
 
-        <div className="bg-white shadow-md rounded-md w-full max-w-4xl">
-          <div className="border-b px-10 py-6">
-            <div className="flex justify-between text-lg">
-              <span className="font-semibold">Full Name:</span>
-              <span>
-                {user.first_name} {user.last_name}{" "}
-              </span>
-            </div>
-          </div>
-
-          {/* <div className="border-b px-10 py-6">
-            <div className="flex justify-between text-lg">
-              <span className="font-semibold">Employee ID:</span>
-              <span>{user.employeeId}</span>
-            </div>
-          </div> */}
-
-          <div className="border-b px-10 py-6">
-            <div className="flex justify-between text-lg">
-              <span className="font-semibold">Email Address:</span>
-              <span>{user.email}</span>
-            </div>
-          </div>
-
-          <div className="border-b px-10 py-6">
-            <div className="flex justify-between text-lg">
-              <span className="font-semibold">Role:</span>
-              <span>{user.role}</span>
-            </div>
-          </div>
-
-          <div className="px-10 py-6">
-            <div className="flex justify-between text-lg">
-              <span className="font-semibold">Join Date:</span>
-              <span>{user.department}</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="mt-6 flex space-x-4 px-10">
-          <button className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700">
-            Edit Profile
-          </button>
-          <button className="bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700">
-            Change Password
-          </button>
+        <div className="bg-white shadow-md rounded-md w-full max-w-6xl overflow-x-auto">
+          <table className="min-w-full text-sm text-left">
+            <thead className="bg-gray-200">
+              <tr>
+                <th className="px-4 py-3 font-semibold">#</th>
+                <th className="px-4 py-3 font-semibold">Full Name</th>
+                <th className="px-4 py-3 font-semibold">Email</th>
+                <th className="px-4 py-3 font-semibold">Department</th>
+                <th className="px-4 py-3 font-semibold">Student Number</th>
+                <th className="px-4 py-3 font-semibold">Program</th>
+                <th className="px-4 py-3 font-semibold">Year</th>
+                <th className="px-4 py-3 font-semibold">Semester</th>
+                <th className="px-4 py-3 font-semibold">CGPA</th>
+                <th className="px-4 py-3 font-semibold">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {students.length === 0 ? (
+                <tr>
+                  <td colSpan={10} className="text-center px-4 py-6">
+                    No students found.
+                  </td>
+                </tr>
+              ) : (
+                students.map((s, i) => {
+                  const d = s.student_details || {};
+                  return (
+                    <tr
+                      key={s._id || i}
+                      className={i % 2 === 0 ? "bg-white" : "bg-gray-50"}
+                    >
+                      <td className="px-4 py-3">{i + 1}</td>
+                      <td className="px-4 py-3">
+                        {s.first_name} {s.last_name}
+                      </td>
+                      <td className="px-4 py-3">{s.email}</td>
+                      <td className="px-4 py-3">{s.department}</td>
+                      <td className="px-4 py-3">{d.student_number || "-"}</td>
+                      <td className="px-4 py-3">{d.program_id || "-"}</td>
+                      <td className="px-4 py-3">{d.admission_year || "-"}</td>
+                      <td className="px-4 py-3">{d.current_semester || "-"}</td>
+                      <td className="px-4 py-3">{d.cgpa ?? "-"}</td>
+                      <td className="px-4 py-3">{d.status || "-"}</td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
         </div>
       </main>
     </div>
