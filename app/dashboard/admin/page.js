@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation"
 
 export default function Home() {  
-  redirect("/dashboard/admin/student")
+  redirect("/dashboard/admin/profile")
 }

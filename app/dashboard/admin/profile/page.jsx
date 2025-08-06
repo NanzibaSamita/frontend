@@ -13,14 +13,14 @@ export default function AdminProfilePage() {
 
     // 2. Decode it
     const decoded = jwtDecode(token);
-
+    console.log(decoded)
     // 3. Simulate fetching user info from token (or optional API call)
     // NOTE: This assumes your token includes `email`, `role`, etc.
     setUser({
       first_name: decoded.first_name, // Assuming field exists
       last_name: decoded.last_name,
 
-      employeeId: decoded.employeeId,
+      employeeId: decoded.user_id,
       email: decoded.email,
       role: decoded.role,
       department: decoded.department,
@@ -36,8 +36,8 @@ export default function AdminProfilePage() {
   }
 
   return (
-    <div className="flex h-screen bg-gray-100">
-      {<AdminSidebar />}
+    <div className="flex h-screen ">
+      
 
       <main className="flex-1 p-10">
         <h1 className="text-3xl font-bold mb-8">Profile</h1>
@@ -52,12 +52,12 @@ export default function AdminProfilePage() {
             </div>
           </div>
 
-          <div className="border-b px-10 py-6">
+          {/* <div className="border-b px-10 py-6">
             <div className="flex justify-between text-lg">
               <span className="font-semibold">Employee ID:</span>
               <span>{user.employeeId}</span>
             </div>
-          </div>
+          </div> */}
 
           <div className="border-b px-10 py-6">
             <div className="flex justify-between text-lg">
