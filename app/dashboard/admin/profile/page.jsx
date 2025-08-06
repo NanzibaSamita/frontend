@@ -37,7 +37,7 @@ export default function AdminProfilePage() {
 
   return (
     <div className="flex h-screen bg-gray-100">
-      {/* <AdminSidebar /> */}
+      {<AdminSidebar />}
 
       <main className="flex-1 p-10">
         <h1 className="text-3xl font-bold mb-8">Profile</h1>
