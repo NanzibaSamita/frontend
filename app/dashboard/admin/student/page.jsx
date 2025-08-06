@@ -4,16 +4,17 @@ import { useState } from "react";
 import AdminSidebar from "@/components/admin-sidebar";
 import { useRouter } from "next/navigation";
 import axios from "axios";
+import { jwtDecode } from "jwt-decode";
 
 export default function AddStudentPage() {
   const [studentData, setStudentData] = useState({
-    user_id: "",
+    student_number:"",
     email: "",
     first_name: "",
     last_name: "",
-    program: "",
+    program_id: "",
     department: "",
-    academic_year: "",
+    admission_year: "",
   });
   const [credentials, setCredentials] = useState(null); // For displaying generated creds
   const [loading, setLoading] = useState(false);
@@ -26,61 +27,67 @@ export default function AddStudentPage() {
   };
 
   // Handle form submission
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setCredentials(null);
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  setLoading(true);
+  setCredentials(null);
 
-    try {
-      const token = localStorage.getItem("token"); // Must be logged in as admin
+  try {
+    const token = localStorage.getItem("token"); // Must be logged in as admin
 
-      if (!token) {
-        alert("You must be logged in as admin to perform this action.");
-        setLoading(false);
-        return;
-      }
-
-      // Send academic_year as number
-      const payload = {
-        ...studentData,
-        academic_year: Number(studentData.academic_year),
-      };
-
-      const response = await axios.post(
-        "http://localhost:8080/api/admin/create-student", // Correct API endpoint and port!
-        payload,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
+    if (!token) {
+      alert("You must be logged in as admin to perform this action.");
       setLoading(false);
-
-      // Show the generated email & password
-      setCredentials(response.data.credentials);
-
-      // Optionally auto-redirect after a few seconds
-      setTimeout(() => {
-        router.push("/dashboard/admin/student/list");
-      }, 3500);
-
-    } catch (error) {
-      setLoading(false);
-      if (error.response?.status === 401) {
-        alert("Unauthorized. Please login again as admin.");
-      } else if (error.response?.status === 403) {
-        alert("Forbidden. You are not authorized to create students.");
-      } else if (error.response?.status === 409) {
-        alert("User already exists.");
-      } else if (error.response?.data?.message) {
-        alert(error.response.data.message);
-      } else {
-        alert("Error creating student. Please try again.");
-      }
+      return;
     }
-  };
+
+    // Decode token to extract admin's _id
+    const decoded = jwtDecode(token);
+    console.log(decoded._id)
+    console.log(decoded)
+
+    const userIdFromToken = decoded._id; // depending on your backend token
+
+    // Send academic_year as number, set user_id from token
+    const payload = {
+      ...studentData, // <-- overwrite with _id from token
+      admission_year: Number(studentData.admission_year),
+    };
+    console.log(payload);
+
+    const response = await axios.post(
+      "http://localhost:8080/api/admin/create-student/manual-student-creation",
+      payload,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    setLoading(false);
+    console.log(response.data);
+
+    setTimeout(() => {
+      router.push("/dashboard/admin/profile");
+    }, 3500);
+
+  } catch (error) {
+    setLoading(false);
+    if (error.response?.status === 401) {
+      alert("Unauthorized. Please login again as admin.");
+    } else if (error.response?.status === 403) {
+      alert("Forbidden. You are not authorized to create students.");
+    } else if (error.response?.status === 409) {
+      alert("User already exists.");
+    } else if (error.response?.data?.message) {
+      alert(error.response.data.message);
+    } else {
+      alert("Error creating student. Please try again.");
+    }
+  }
+};
+
 
   return (
     <div className="flex min-h-screen bg-gray-50">
@@ -93,11 +100,11 @@ export default function AddStudentPage() {
             {[
               ["First Name", "first_name"],
               ["Last Name", "last_name"],
-              ["Student ID", "user_id"],
+              ["Student ID", "student_number"],
               ["Email Address", "email"],
               ["Department", "department"],
-              ["Program", "program"],
-              ["Academic Year", "academic_year"], // more descriptive label
+              ["Program", "program_id"],
+              ["Admission Year", "admission_year"], // more descriptive label
             ].map(([label, name]) => (
               <div key={name} className="flex flex-col">
                 <label className="text-sm font-medium text-gray-700">{label}</label>
