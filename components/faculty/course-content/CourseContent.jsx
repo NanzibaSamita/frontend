@@ -1,110 +1,100 @@
-// src/components/faculty/course-content/CourseContent.jsx
 "use client";
 
-import React, { useState } from "react";
-import CourseModule from "./CourseModule"; // Importing the CourseModule component
+import React, { useEffect, useState } from "react";
 
 const CourseContent = () => {
-  // State for holding course modules
-  const [modules, setModules] = useState([
-    {
-      title: "Introduction to Machine Learning",
-      description: "Overview of ML, its history, and applications.",
-      materials: ["Lecture Slides", "Reading Material"],
-      status: "Planned",
-    },
-    {
-      title: "Supervised Learning",
-      description: "Introduction to regression, classification, etc.",
-      materials: ["Lecture Slides", "Video Lecture"],
-      status: "Planned",
-    },
-    {
-      title: "Unsupervised Learning",
-      description: "Clustering algorithms, PCA, etc.",
-      materials: ["Lecture Slides", "Assignment Guide"],
-      status: "Planned",
-    },
-    {
-      title: "Neural Networks and Deep Learning",
-      description: "Understanding deep neural networks and CNNs.",
-      materials: ["Lecture Slides", "Reading Material"],
-      status: "Planned",
-    },
+  const [courses, setCourses] = useState([
+    { name: "Machine Learning", credit: 3 },
+    { name: "Pattern Recognition", credit: 3 },
+    { name: "Deep Learning", credit: 1.5 },
   ]);
 
-  // Handlers for saving and canceling changes
-  const handleSave = () => {
-    alert("Changes Saved!");
-  };
-
-  const handleCancel = () => {
-    alert("Changes Cancelled!");
-  };
-
+  // Set both heading and table in the same flex column with left padding
   return (
-    <div style={{ padding: "30px", backgroundColor: "#f9f9f9" }}>
-      {/* Course Header */}
-      <div style={{ marginBottom: "30px" }}>
-        <h1 style={{ color: "#333", fontWeight: "bold" }}>Machine Learning</h1>
-        <p style={{ color: "#555", fontSize: "1.2rem" }}>
-          <strong>Instructor:</strong> John Doe
-        </p>
-        <p style={{ color: "#555", fontSize: "1.2rem" }}>
-          <strong>Course Overview:</strong> This course will teach the
-          fundamentals of machine learning. Topics include supervised learning,
-          unsupervised learning, and deep learning applications.
-        </p>
-      </div>
-
-      {/* Modules Overview */}
-      <div>
-        <h2 style={{ color: "#333", marginBottom: "20px" }}>
-          Modules Overview
-        </h2>
-        {modules.map((module, index) => (
-          <CourseModule key={index} module={module} />
-        ))}
-      </div>
-
-      {/* Save and Cancel Buttons */}
-      <div
+    <div style={{ padding: "40px 0 0 60px", maxWidth: "1100px" }}>
+      <h1
         style={{
-          display: "flex",
-          justifyContent: "space-between",
-          marginTop: "30px",
+          fontSize: "2.5rem",
+          fontWeight: "bold",
+          marginBottom: 32,
+          color: "#222",
         }}
       >
-        <button
-          onClick={handleSave}
-          style={{
-            padding: "12px 24px",
-            fontSize: "1.1rem",
-            cursor: "pointer",
-            border: "none",
-            backgroundColor: "#007bff",
-            color: "white",
-            borderRadius: "5px",
-            boxShadow: "0 4px 8px rgba(0, 123, 255, 0.2)",
-          }}
-        >
-          Save Changes
-        </button>
-        <button
-          onClick={handleCancel}
-          style={{
-            padding: "12px 24px",
-            fontSize: "1.1rem",
-            cursor: "pointer",
-            border: "none",
-            backgroundColor: "#dc3545",
-            color: "white",
-            borderRadius: "5px",
-            boxShadow: "0 4px 8px rgba(220, 53, 69, 0.2)",
-          }}
-        >
-          Cancel
-        </button>
+        Course Content
+      </h1>
+      <div
+        style={{
+          background: "#fff",
+          borderRadius: "10px",
+          border: "1.5px solid #bdbdbd",
+          width: "90%", // Or you can use "100%" if you want it flush to the padding
+          minWidth: 400,
+          boxShadow: "0 2px 8px rgba(60,60,60,0.04)",
+        }}
+      >
+        <table style={{ width: "100%", borderCollapse: "collapse" }}>
+          <thead>
+            <tr style={{ background: "#f5f6f8" }}>
+              <th
+                style={{
+                  textAlign: "left",
+                  padding: "18px 20px",
+                  fontWeight: 700,
+                  fontSize: "1.15rem",
+                  borderBottom: "1.5px solid #bdbdbd",
+                  color: "#333",
+                  letterSpacing: "0.01em",
+                }}
+              >
+                Course Name
+              </th>
+              <th
+                style={{
+                  textAlign: "left",
+                  padding: "18px 20px",
+                  fontWeight: 700,
+                  fontSize: "1.15rem",
+                  borderBottom: "1.5px solid #bdbdbd",
+                  color: "#333",
+                  letterSpacing: "0.01em",
+                  width: "200px",
+                }}
+              >
+                Course Credit
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {courses.map((c, i) => (
+              <tr key={i} style={{ borderTop: "1px solid #e0e0e0" }}>
+                <td
+                  style={{
+                    padding: "18px 20px",
+                    fontSize: "1.08rem",
+                    color: "#23272f",
+                    fontWeight: 500,
+                    borderBottom:
+                      i === courses.length - 1 ? "none" : "1px solid #e0e0e0",
+                  }}
+                >
+                  {c.name}
+                </td>
+                <td
+                  style={{
+                    padding: "18px 20px",
+                    fontSize: "1.08rem",
+                    color: "#23272f",
+                    fontWeight: 500,
+                    borderBottom:
+                      i === courses.length - 1 ? "none" : "1px solid #e0e0e0",
+                  }}
+                >
+                  {c.credit}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
   );
