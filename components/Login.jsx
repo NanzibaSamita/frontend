@@ -4,6 +4,7 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"  // ✅ For redirection
 import Image from "next/image"
 import axios from "axios"
+import { jwtDecode } from "jwt-decode";
 
 export default function LoginPage() {
   const router = useRouter()  // ✅ Initialize router
@@ -12,30 +13,43 @@ export default function LoginPage() {
   const [password, setPassword] = useState("")
   const [remember, setRemember] = useState(false)
 
-  const handleLogin = async (e) => {
-    e.preventDefault()
-    console.log(email, password)
-    try {
-      const response = await axios.post("http://localhost:8080/api/auth/login", {
-        email,
-        password,
-      })
+const handleLogin = async (e) => {
+  e.preventDefault();
+  try {
+    const response = await axios.post("http://localhost:8080/api/auth/login", {
+      email,
+      password,
+    });
 
-      const token = response.data.token
+    const token = response.data.token;
+    localStorage.setItem("token", token);
 
-      // Save token (for example in localStorage)
-      localStorage.setItem("token", token)
+    alert("Login successful!");
 
-      alert("Login successful!")
+    // Decode the token to get the user's role
+    const decoded = jwtDecode(token);
+    const role = decoded?.role;
 
-      // ✅ Redirect to student profile page
-      router.push("/dashboard/student/profile")
-
-    } catch (error) {
-      const errorMsg = error.response?.data?.message || "Login failed"
-      alert(errorMsg)
+    // Redirect based on the user's role
+    if (role === "Admin") {
+      router.push("/dashboard/admin/profile");
+    } else if (role === "Student") {
+      router.push("/dashboard/student/profile");
+    } else if (role === "Faculty") {
+      router.push("/dashboard/faculty/profile");
+    } else if (role === "PGC" || role === "CASR") {
+      router.push("/dashboard/pgc/profile");
+    } else {
+      // fallback
+      router.push("/");
     }
+
+  } catch (error) {
+    const errorMsg = error.response?.data?.message || "Login failed";
+    alert(errorMsg);
   }
+}
+
 
   return (
     <div className="min-h-screen bg-[#f8faf9] flex flex-col items-center justify-start px-4 pt-10 md:pt-16 space-y-10">
@@ -119,8 +133,8 @@ export default function LoginPage() {
           className="w-full text-sm text-blue-600 hover:underline mt-2"
           onClick={() => router.push("/forgot-password")}
      >
-  Forgot password?
-</button>
+  F        orgot password?
+        </button>
 
         
       </form>

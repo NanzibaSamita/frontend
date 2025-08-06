@@ -15,6 +15,8 @@ export default function AddStudentPage() {
     department: "",
     academic_year: "",
   });
+  const [credentials, setCredentials] = useState(null); // For displaying generated creds
+  const [loading, setLoading] = useState(false);
 
   const router = useRouter();
 
@@ -26,37 +28,54 @@ export default function AddStudentPage() {
   // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setLoading(true);
+    setCredentials(null);
 
     try {
-      const token = localStorage.getItem("token"); // ✅ make sure token was saved at login
+      const token = localStorage.getItem("token"); // Must be logged in as admin
 
       if (!token) {
         alert("You must be logged in as admin to perform this action.");
+        setLoading(false);
         return;
       }
 
+      // Send academic_year as number
+      const payload = {
+        ...studentData,
+        academic_year: Number(studentData.academic_year),
+      };
+
       const response = await axios.post(
-        "http://localhost:5000/api/admin/create-student", // or /api/admin/create-student if that's your actual path
-        studentData,
+        "http://localhost:8080/api/admin/create-student", // Correct API endpoint and port!
+        payload,
         {
           headers: {
-            Authorization: `Bearer ${token}`, // ✅ Attach token to request
+            Authorization: `Bearer ${token}`,
           },
         }
       );
 
-      console.log(response.data);
-      alert("Student created successfully!");
-      router.push("/dashboard/admin/student/list");
-    } catch (error) {
-      console.error("Error creating student:", error);
+      setLoading(false);
 
+      // Show the generated email & password
+      setCredentials(response.data.credentials);
+
+      // Optionally auto-redirect after a few seconds
+      setTimeout(() => {
+        router.push("/dashboard/admin/student/list");
+      }, 3500);
+
+    } catch (error) {
+      setLoading(false);
       if (error.response?.status === 401) {
         alert("Unauthorized. Please login again as admin.");
       } else if (error.response?.status === 403) {
         alert("Forbidden. You are not authorized to create students.");
       } else if (error.response?.status === 409) {
         alert("User already exists.");
+      } else if (error.response?.data?.message) {
+        alert(error.response.data.message);
       } else {
         alert("Error creating student. Please try again.");
       }
@@ -64,11 +83,12 @@ export default function AddStudentPage() {
   };
 
   return (
-    <div className="flex">
+    <div className="flex min-h-screen bg-gray-50">
+      {/* Uncomment this if you want the sidebar */}
+      {/* <AdminSidebar /> */}
       <div className="flex-1 p-10">
         <h1 className="text-4xl font-bold text-black mb-8">Add Student</h1>
         <div className="bg-white rounded-lg shadow-md p-8 max-w-4xl mx-auto">
-          <h2 className="text-xl font-semibold mb-6">Total Students: 120</h2>
           <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {[
               ["First Name", "first_name"],
@@ -77,12 +97,12 @@ export default function AddStudentPage() {
               ["Email Address", "email"],
               ["Department", "department"],
               ["Program", "program"],
-              ["Current AY", "academic_year"],
+              ["Academic Year", "academic_year"], // more descriptive label
             ].map(([label, name]) => (
               <div key={name} className="flex flex-col">
                 <label className="text-sm font-medium text-gray-700">{label}</label>
                 <input
-                  type="text"
+                  type={name === "email" ? "email" : "text"}
                   name={name}
                   value={studentData[name]}
                   onChange={handleChange}
@@ -94,12 +114,23 @@ export default function AddStudentPage() {
             <div className="md:col-span-2 mt-4 text-right">
               <button
                 type="submit"
-                className="bg-green-600 text-white py-3 px-6 rounded-lg hover:bg-green-700"
+                className={`bg-green-600 text-white py-3 px-6 rounded-lg hover:bg-green-700 ${loading ? "opacity-50 cursor-not-allowed" : ""}`}
+                disabled={loading}
               >
-                Submit
+                {loading ? "Submitting..." : "Submit"}
               </button>
             </div>
           </form>
+
+          {/* Show generated credentials after success */}
+          {credentials && (
+            <div className="mt-6 p-4 border rounded text-green-700 bg-green-50">
+              <b>Student Created!</b><br />
+              Email: <code>{credentials.email}</code> <br />
+              Password: <code>{credentials.password}</code> <br />
+              (Sent to student’s email)
+            </div>
+          )}
         </div>
       </div>
     </div>
