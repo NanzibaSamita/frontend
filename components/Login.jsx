@@ -133,7 +133,7 @@ const handleLogin = async (e) => {
           className="w-full text-sm text-blue-600 hover:underline mt-2"
           onClick={() => router.push("/forgot-password")}
      >
-  F        orgot password?
+          Forgot password?
         </button>
 
         
