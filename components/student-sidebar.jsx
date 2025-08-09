@@ -26,6 +26,11 @@ export default function StudentSidebar() {
       icon: <BookText size={18} />,
     },
     {
+      name: "Result",
+      href: "/dashboard/student/result",
+      icon: <FileText size={18} />, 
+    },
+    {
       name: "Supervisor",
       href: "/dashboard/student/supervisor",
       icon: <GraduationCap size={18} />,
@@ -35,6 +40,7 @@ export default function StudentSidebar() {
       href: "/dashboard/student/thesis",
       icon: <FileText size={18} />,
     },
+    
   ];
 
   const handleLogout = () => {
