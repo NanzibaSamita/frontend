@@ -8,42 +8,58 @@ const CourseManagementPage = () => {
   const [bulkUploading, setBulkUploading] = useState(false);
   const [bulkResult, setBulkResult] = useState(null);
   const [loading, setLoading] = useState(false);
+
   const [studentData, setStudentData] = useState({
     student_id: "",
     course_id: "",
   });
 
-  const [students, setStudents] = useState([]);
-  const [courses, setCourses] = useState([]);
+  const [studentQuery, setStudentQuery] = useState("");
+  const [filteredStudents, setFilteredStudents] = useState([]);
+  const [courseQuery, setCourseQuery] = useState("");
+  const [filteredCourses, setFilteredCourses] = useState([]);
 
   const router = useRouter();
 
-  // Fetch students & courses for dropdowns
+  // --- Debounced Student Search ---
   useEffect(() => {
-    const fetchData = async () => {
+    const handler = setTimeout(async () => {
+      if (!studentQuery) return setFilteredStudents([]);
       try {
         const token = localStorage.getItem("token");
-        if (!token) return;
-
-        const [studentRes, courseRes] = await Promise.all([
-          axios.get("http://localhost:8080/api/admin/students", {
-            headers: { Authorization: `Bearer ${token}` },
-          }),
-          axios.get("http://localhost:8080/api/admin/courses", {
-            headers: { Authorization: `Bearer ${token}` },
-          }),
-        ]);
-
-        setStudents(studentRes.data);
-        setCourses(courseRes.data);
+        const res = await axios.get(
+          `http://localhost:8080/api/admin/search/students?query=${studentQuery}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        setFilteredStudents(res.data);
       } catch (err) {
-        console.error("❌ Fetch error:", err);
+        console.error(err);
       }
-    };
-    fetchData();
-  }, []);
+    }, 300);
 
-  // Bulk upload course
+    return () => clearTimeout(handler);
+  }, [studentQuery]);
+
+  // --- Debounced Course Search ---
+  useEffect(() => {
+    const handler = setTimeout(async () => {
+      if (!courseQuery) return setFilteredCourses([]);
+      try {
+        const token = localStorage.getItem("token");
+        const res = await axios.get(
+          `http://localhost:8080/api/admin/search/courses?query=${courseQuery}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        setFilteredCourses(res.data);
+      } catch (err) {
+        console.error(err);
+      }
+    }, 300);
+
+    return () => clearTimeout(handler);
+  }, [courseQuery]);
+
+  // --- Bulk Upload ---
   const handleBulkUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -52,11 +68,7 @@ const CourseManagementPage = () => {
 
     try {
       const token = localStorage.getItem("token");
-      if (!token) {
-        alert("You must be logged in as admin to perform this action.");
-        setBulkUploading(false);
-        return;
-      }
+      if (!token) throw new Error("Admin not logged in");
 
       const formData = new FormData();
       formData.append("file", file);
@@ -74,86 +86,65 @@ const CourseManagementPage = () => {
 
       setBulkUploading(false);
       setBulkResult(response.data);
-    } catch (error) {
+    } catch (err) {
       setBulkUploading(false);
       setBulkResult({
         message: "Bulk upload failed",
-        errors: [
-          {
-            reason:
-              error.response?.data?.message ||
-              "Unknown error. Please check your file and try again.",
-          },
-        ],
+        errors: [{ reason: err.response?.data?.message || err.message }],
       });
     }
   };
 
-  // Handle manual course assignment to students
+  // --- Manual Assignment ---
   const handleAssignCourse = async (e) => {
     e.preventDefault();
     setLoading(true);
 
     try {
       const token = localStorage.getItem("token");
-      if (!token) {
-        alert("You must be logged in as admin to perform this action.");
-        setLoading(false);
-        return;
-      }
+      if (!token) throw new Error("Admin not logged in");
 
-      const response = await axios.post(
+      await axios.post(
         "http://localhost:8080/api/admin/assign-course-manually",
         studentData,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
+        { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      setLoading(false);
       alert("✅ Course assigned successfully");
-    } catch (error) {
+
+      // Clear inputs after assignment
+      setStudentQuery("");
+      setCourseQuery("");
+      setFilteredStudents([]);
+      setFilteredCourses([]);
+      setStudentData({ student_id: "", course_id: "" });
+    } catch (err) {
+      alert("❌ Error assigning course: " + (err.response?.data?.message || err.message));
+    } finally {
       setLoading(false);
-      alert(
-        "❌ Error assigning course: " +
-          (error.response?.data?.message || "Unknown error")
-      );
     }
   };
 
-  // Handle auto course assignment
+  // --- Auto Assignment ---
   const handleAutoAssign = async () => {
     setLoading(true);
     try {
       const token = localStorage.getItem("token");
-      if (!token) {
-        alert("You must be logged in as admin to perform this action.");
-        setLoading(false);
-        return;
-      }
+      if (!token) throw new Error("Admin not logged in");
 
       const response = await axios.post(
         "http://localhost:8080/api/admin/assign-courses",
         {},
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
+        { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      setLoading(false);
       alert(
         `✅ Auto assignment done. Created: ${response.data.created}, Skipped: ${response.data.skipped}`
       );
-    } catch (error) {
+    } catch (err) {
+      alert("❌ Auto assignment failed: " + (err.response?.data?.message || err.message));
+    } finally {
       setLoading(false);
-      alert(
-        "❌ Auto assignment failed: " +
-          (error.response?.data?.message || "Unknown error")
-      );
     }
   };
 
@@ -162,33 +153,22 @@ const CourseManagementPage = () => {
       <div className="flex-1 p-10">
         <h1 className="text-4xl font-bold text-black mb-8">Manage Courses</h1>
 
-        {/* Bulk Upload Form */}
+        {/* --- Bulk Upload Section --- */}
         <div className="bg-white rounded-lg shadow-md p-8 max-w-4xl mx-auto mb-8">
-          <h2 className="text-xl font-semibold mb-4">
-            Bulk Upload Courses via CSV
-          </h2>
-          <input
-            type="file"
-            accept=".csv"
-            onChange={handleBulkUpload}
-            disabled={bulkUploading}
-            className="mb-2"
-          />
-          {bulkUploading && <div className="text-blue-600">Uploading...</div>}
+          <h2 className="text-xl font-semibold mb-4">Bulk Upload Courses via CSV</h2>
+          <input type="file" accept=".csv" onChange={handleBulkUpload} disabled={bulkUploading} />
+          {bulkUploading && <div className="text-blue-600 mt-2">Uploading...</div>}
           {bulkResult && (
             <div className="mt-4 p-4 border rounded bg-gray-50">
               <div className="font-bold">{bulkResult.message}</div>
-              <div>Total Records: {bulkResult.total || 0}</div>
-              <div>Failed: {bulkResult.failed || 0}</div>
+              {bulkResult.total !== undefined && <div>Total Records: {bulkResult.total}</div>}
+              {bulkResult.failed !== undefined && <div>Failed: {bulkResult.failed}</div>}
               {bulkResult.errors && bulkResult.errors.length > 0 && (
                 <div className="mt-2">
                   <div className="font-semibold">Errors:</div>
                   <ul className="list-disc list-inside text-sm text-red-700">
                     {bulkResult.errors.map((err, idx) => (
-                      <li key={idx}>
-                        {err.course_code ? `Course ${err.course_code}: ` : ""}
-                        {err.reason}
-                      </li>
+                      <li key={idx}>{err.course_code ? `Course ${err.course_code}: ` : ""}{err.reason}</li>
                     ))}
                   </ul>
                 </div>
@@ -197,58 +177,77 @@ const CourseManagementPage = () => {
           )}
         </div>
 
-        {/* Manual Course Assignment Form */}
-        <div className="bg-white rounded-lg shadow-md p-8 max-w-4xl mx-auto">
-          <h2 className="text-xl font-semibold mb-4">
-            Manually Assign Course to Student
-          </h2>
+        {/* --- Manual Assignment Section --- */}
+        <div className="bg-white rounded-lg shadow-md p-8 max-w-4xl mx-auto mb-8">
+          <h2 className="text-xl font-semibold mb-4">Manually Assign Course to Student</h2>
           <form onSubmit={handleAssignCourse} className="grid grid-cols-1 gap-6">
-            <div className="flex flex-col">
-              <label className="text-sm font-medium text-gray-700">
-                Student
-              </label>
-              <select
-                value={studentData.student_id}
-                onChange={(e) =>
-                  setStudentData({ ...studentData, student_id: e.target.value })
-                }
+
+            {/* Student Autocomplete */}
+            <div className="flex flex-col relative">
+              <label className="text-sm font-medium text-gray-700">Student</label>
+              <input
+                type="text"
+                value={studentQuery}
+                onChange={(e) => setStudentQuery(e.target.value)}
+                placeholder="Type student number"
                 className="mt-2 p-3 border border-gray-300 rounded-md"
-                required
-              >
-                <option value="">-- Select Student --</option>
-                {students.map((s) => (
-                  <option key={s._id} value={s._id}>
-                    {s.user_id?.name} ({s.user_id?.email})
-                  </option>
-                ))}
-              </select>
+                autoComplete="off"
+              />
+              {filteredStudents.length > 0 && (
+                <ul className="absolute z-10 mt-1 bg-white border border-gray-300 rounded-md w-full max-h-60 overflow-auto shadow-lg">
+                  {filteredStudents.map((s) => (
+                    <li
+                      key={s._id}
+                      className="p-2 hover:bg-gray-200 cursor-pointer"
+                      onClick={() => {
+                        setStudentData({ ...studentData, student_id: s._id });
+                        setStudentQuery(`${s.student_number}`);
+                        setFilteredStudents([]);
+                      }}
+                    >
+                      {s.student_number} 
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
 
-            <div className="flex flex-col">
+
+
+            {/* Course Autocomplete */}
+            <div className="flex flex-col relative">
               <label className="text-sm font-medium text-gray-700">Course</label>
-              <select
-                value={studentData.course_id}
-                onChange={(e) =>
-                  setStudentData({ ...studentData, course_id: e.target.value })
-                }
+              <input
+                type="text"
+                value={courseQuery}
+                onChange={(e) => setCourseQuery(e.target.value)}
+                placeholder="Type course code or name"
                 className="mt-2 p-3 border border-gray-300 rounded-md"
-                required
-              >
-                <option value="">-- Select Course --</option>
-                {courses.map((c) => (
-                  <option key={c._id} value={c._id}>
-                    {c.course_code} - {c.course_name}
-                  </option>
-                ))}
-              </select>
+                autoComplete="off"
+              />
+              {filteredCourses.length > 0 && (
+                <ul className="absolute z-10 mt-1 bg-white border border-gray-300 rounded-md w-full max-h-60 overflow-auto shadow-lg">
+                  {filteredCourses.map((c) => (
+                    <li
+                      key={c._id}
+                      className="p-2 hover:bg-gray-200 cursor-pointer"
+                      onClick={() => {
+                        setStudentData({ ...studentData, course_id: c._id });
+                        setCourseQuery(`${c.course_code} - ${c.course_name}`);
+                        setFilteredCourses([]);
+                      }}
+                    >
+                      {c.course_code} - {c.course_name}
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
 
             <div className="text-right mt-4">
               <button
                 type="submit"
-                className={`bg-green-600 text-white py-3 px-6 rounded-lg hover:bg-green-700 ${
-                  loading ? "opacity-50 cursor-not-allowed" : ""
-                }`}
+                className={`bg-green-600 text-white py-3 px-6 rounded-lg hover:bg-green-700 ${loading ? "opacity-50 cursor-not-allowed" : ""}`}
                 disabled={loading}
               >
                 {loading ? "Assigning..." : "Assign Course"}
@@ -257,14 +256,12 @@ const CourseManagementPage = () => {
           </form>
         </div>
 
-        {/* Auto Assignment */}
-        <div className="bg-white rounded-lg shadow-md p-8 max-w-4xl mx-auto mt-8">
+        {/* --- Auto Assignment Section --- */}
+        <div className="bg-white rounded-lg shadow-md p-8 max-w-4xl mx-auto">
           <h2 className="text-xl font-semibold mb-4">Auto Assign Courses</h2>
           <button
             onClick={handleAutoAssign}
-            className={`bg-blue-600 text-white py-3 px-6 rounded-lg hover:bg-blue-700 ${
-              loading ? "opacity-50 cursor-not-allowed" : ""
-            }`}
+            className={`bg-blue-600 text-white py-3 px-6 rounded-lg hover:bg-blue-700 ${loading ? "opacity-50 cursor-not-allowed" : ""}`}
             disabled={loading}
           >
             {loading ? "Assigning..." : "Auto Assign Courses"}
