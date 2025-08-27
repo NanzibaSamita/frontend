@@ -1,55 +1,53 @@
 "use client"
 
 import { useState } from "react"
-import { useRouter } from "next/navigation"  // ✅ For redirection
+import { useRouter } from "next/navigation"
 import Image from "next/image"
 import axios from "axios"
 import { jwtDecode } from "jwt-decode";
 
 export default function LoginPage() {
-  const router = useRouter()  // ✅ Initialize router
+  const router = useRouter()
 
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [remember, setRemember] = useState(false)
+  const [error, setError] = useState("") // ✅ for inline error message
 
-const handleLogin = async (e) => {
-  e.preventDefault();
-  try {
-    const response = await axios.post("http://localhost:8080/api/auth/login", {
-      email,
-      password,
-    });
+  const handleLogin = async (e) => {
+    e.preventDefault()
+    setError("") // reset error
 
-    const token = response.data.token;
-    localStorage.setItem("token", token);
+    try {
+      const response = await axios.post("http://localhost:8080/api/auth/login", {
+        email,
+        password,
+      })
 
-    alert("Login successful!");
+      const token = response.data.token
+      localStorage.setItem("token", token)
 
-    // Decode the token to get the user's role
-    const decoded = jwtDecode(token);
-    const role = decoded?.role;
+      // Decode role
+      const decoded = jwtDecode(token)
+      const role = decoded?.role
 
-    // Redirect based on the user's role
-    if (role === "Admin") {
-      router.push("/dashboard/admin/profile");
-    } else if (role === "Student") {
-      router.push("/dashboard/student/profile");
-    } else if (role === "Faculty") {
-      router.push("/dashboard/faculty/profile");
-    } else if (role === "PGC" || role === "CASR") {
-      router.push("/dashboard/pgc/profile");
-    } else {
-      // fallback
-      router.push("/");
+      if (role === "Admin") {
+        router.push("/dashboard/admin/profile")
+      } else if (role === "Student") {
+        router.push("/dashboard/student/profile")
+      } else if (role === "Faculty") {
+        router.push("/dashboard/faculty/profile")
+      } else if (role === "PGC" || role === "CASR") {
+        router.push("/dashboard/pgc/profile")
+      } else {
+        router.push("/")
+      }
+
+    } catch (error) {
+      const errorMsg = error.response?.data?.message || "Login failed"
+      setError(errorMsg) // ✅ show error inline
     }
-
-  } catch (error) {
-    const errorMsg = error.response?.data?.message || "Login failed";
-    alert(errorMsg);
   }
-}
-
 
   return (
     <div className="min-h-screen bg-[#f8faf9] flex flex-col items-center justify-start px-4 pt-10 md:pt-16 space-y-10">
@@ -88,6 +86,13 @@ const handleLogin = async (e) => {
         className="w-full max-w-sm bg-white p-6 rounded-lg shadow-md space-y-5 mt-[-40px] md:mt-[-60px]"
       >
         <h2 className="text-center text-2xl font-semibold text-gray-800">Login</h2>
+
+        {/* ✅ Inline error message */}
+        {error && (
+          <div className="text-red-600 text-sm text-center font-medium">
+            {error}
+          </div>
+        )}
 
         <div className="space-y-1">
           <label className="block text-sm text-gray-700">Email Address</label>
@@ -132,11 +137,9 @@ const handleLogin = async (e) => {
           type="button"
           className="w-full text-sm text-blue-600 hover:underline mt-2"
           onClick={() => router.push("/forgot-password")}
-     >
+        >
           Forgot password?
         </button>
-
-        
       </form>
     </div>
   )
