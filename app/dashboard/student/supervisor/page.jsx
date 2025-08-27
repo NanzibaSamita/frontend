@@ -4,28 +4,41 @@ import { useState, useEffect } from "react";
 
 export default function SupervisorPage() {
   const [supervisors, setSupervisors] = useState([]);
-  const [selectedSupervisors, setSelectedSupervisors] = useState([]); // allow multiple selection
+  const [selectedSupervisors, setSelectedSupervisors] = useState([]);
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
+  const [eligible, setEligible] = useState(false);
 
-  // Fetch available supervisors
+  // Fetch available supervisors + eligibility
   useEffect(() => {
-    const fetchSupervisors = async () => {
+    const fetchData = async () => {
       try {
-        const res = await fetch(
-          "http://localhost:8080/api/students/supervisor-assignment/available"
+        const token = localStorage.getItem("token");
+
+        // fetch supervisors
+        const supRes = await fetch(
+          "http://localhost:8080/api/students/supervisor-assignment/available",
+          { headers: { Authorization: `Bearer ${token}` } }
         );
-        const data = await res.json();
-        setSupervisors(data.availableSupervisors || []);
+        const supData = await supRes.json();
+        setSupervisors(supData.availableSupervisors || []);
+
+        // fetch eligibility
+        const eligRes = await fetch(
+          "http://localhost:8080/api/students/check-eligibility",
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        const eligData = await eligRes.json();
+        setEligible(eligData.isEligible || false);
       } catch (err) {
-        console.error("Error fetching supervisors:", err);
-        setMessage("Failed to load supervisors.");
+        console.error("Error fetching data:", err);
+        setMessage("Failed to load data.");
       }
     };
-    fetchSupervisors();
+    fetchData();
   }, []);
 
-  // Handle selection (multi-select up to 3)
+  // Handle supervisor select
   const handleSupervisorSelect = (e) => {
     const value = e.target.value;
     setMessage("");
@@ -39,12 +52,18 @@ export default function SupervisorPage() {
     }
   };
 
+  // Remove supervisor
   const handleRemoveSupervisor = (id) => {
     setSelectedSupervisors(selectedSupervisors.filter((sup) => sup !== id));
   };
 
-  // Submit assignment request
+  // Submit
   const handleSubmit = async () => {
+    if (!eligible) {
+      setMessage("You are not eligible to submit a thesis proposal (need ≥ 9 credits and CGPA > 2.5).");
+      return;
+    }
+
     if (selectedSupervisors.length === 0) {
       setMessage("Please select at least one supervisor.");
       return;
@@ -90,12 +109,19 @@ export default function SupervisorPage() {
       <div className="max-w-4xl mx-auto bg-white p-6 rounded-lg shadow-md">
         <h2 className="text-3xl font-semibold text-black mb-8">Select Supervisor(s)</h2>
 
+        {!eligible && (
+          <div className="mb-6 p-3 bg-red-50 border border-red-300 text-red-800 rounded-lg">
+            You are <strong>not eligible</strong> to submit a thesis proposal (must have ≥ 9 credits).
+          </div>
+        )}
+
         {/* Supervisor Dropdown */}
         <div className="flex items-center gap-4">
           <select
             onChange={handleSupervisorSelect}
             className="w-[300px] py-2 px-6 bg-gray-50 border border-gray-300 rounded-md text-black"
             defaultValue=""
+            disabled={!eligible}
           >
             <option value="" disabled>
               Select Supervisor
@@ -109,30 +135,37 @@ export default function SupervisorPage() {
 
           <button
             onClick={handleSubmit}
-            disabled={loading}
+            disabled={loading || !eligible}
             className={`${
-              loading ? "bg-gray-400" : "bg-green-600 hover:bg-green-700"
+              loading || !eligible
+                ? "bg-gray-400 cursor-not-allowed"
+                : "bg-green-600 hover:bg-green-700"
             } text-white py-2 px-6 rounded-md`}
           >
             {loading ? "Submitting..." : "Submit Request"}
           </button>
         </div>
 
-        {/* Selected Supervisors */}
+        {/* Selected Supervisors (shown in order of selection) */}
         {selectedSupervisors.length > 0 && (
-          <div className="mt-4 flex flex-wrap gap-2">
-            {selectedSupervisors.map((id) => {
+          <div className="mt-4 flex flex-col gap-2">
+            {selectedSupervisors.map((id, idx) => {
               const sup = supervisors.find((s) => s._id === id);
               return (
-                <span
+                <div
                   key={id}
-                  className="bg-green-100 text-green-800 px-3 py-1 rounded-full cursor-pointer"
-                  onClick={() => handleRemoveSupervisor(id)}
-                  title="Click to remove"
+                  className="bg-green-100 text-green-800 px-4 py-2 rounded-md flex justify-between items-center"
                 >
-                  {sup ? `${sup.user_id.first_name} ${sup.user_id.last_name}` : "Unknown"}
-                  &times;
-                </span>
+                  <span>
+                    {idx + 1}. {sup ? `${sup.user_id.first_name} ${sup.user_id.last_name}` : "Unknown"}
+                  </span>
+                  <button
+                    className="text-red-600 font-bold"
+                    onClick={() => handleRemoveSupervisor(id)}
+                  >
+                    &times;
+                  </button>
+                </div>
               );
             })}
           </div>
