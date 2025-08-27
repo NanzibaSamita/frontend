@@ -90,7 +90,7 @@ export default function SupervisorPage() {
       );
 
       const data = await res.json();
-
+      console.log(res.data)
       if (!res.ok) {
         setMessage(data.message || "Failed to create assignment.");
       } else {
