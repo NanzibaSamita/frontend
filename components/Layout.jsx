@@ -5,7 +5,7 @@ import StudentSidebar from "@/components/student-sidebar"
 
 export default function Layout({ children }) {
   return (
-    <div className="flex min-h-screen">
+    <div className="flex max-h-screen">
       {/* Sidebar - visible on all dashboard pages */}
       <StudentSidebar />
 

@@ -4,7 +4,7 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
 import axios from "axios"
-import { jwtDecode } from "jwt-decode";
+import { jwtDecode } from "jwt-decode"
 
 export default function LoginPage() {
   const router = useRouter()
@@ -42,7 +42,6 @@ export default function LoginPage() {
       } else {
         router.push("/")
       }
-
     } catch (error) {
       const errorMsg = error.response?.data?.message || "Login failed"
       setError(errorMsg) // ✅ show error inline
@@ -50,97 +49,95 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#f8faf9] flex flex-col items-center justify-start px-4 pt-10 md:pt-16 space-y-10">
-      {/* Header */}
-      <div className="w-full max-w-5xl flex flex-col items-center space-y-4">
-        <div className="w-full flex justify-between items-center px-4">
-          <div className="w-[100px] md:w-[140px]">
-            <Image
-              src="/iut-left.png"
-              alt="IUT Left Logo"
-              width={140}
-              height={140}
-              className="w-full h-auto"
-            />
-          </div>
+    <div className="min-h-screen flex flex-col bg-[#f8faf9]">
+      {/* Header with logos */}
+      <div className="w-full max-w-5xl mx-auto flex justify-between items-center px-4 py-6">
+        <Image
+          src="/iut-left.png"
+          alt="IUT Left Logo"
+          width={140}
+          height={140}
+          className="w-[90px] md:w-[140px] h-auto"
+        />
 
-          <h1 className="text-xl md:text-4xl font-extrabold text-center flex-1 text-gray-800 leading-tight">
-            Postgraduate Academic <br /> Management System
-          </h1>
+        <h1 className="text-base md:text-3xl font-extrabold text-gray-800 text-center leading-tight">
+          Postgraduate Academic <br /> Management System
+        </h1>
 
-          <div className="w-[100px] md:w-[140px]">
-            <Image
-              src="/iut-right.png"
-              alt="IUT Right Logo"
-              width={140}
-              height={140}
-              className="w-full h-auto"
-            />
-          </div>
-        </div>
+        <Image
+          src="/iut-right.png"
+          alt="IUT Right Logo"
+          width={140}
+          height={140}
+          className="w-[90px] md:w-[140px] h-auto"
+        />
       </div>
 
-      {/* Login Form */}
-      <form
-        onSubmit={handleLogin}
-        className="w-full max-w-sm bg-white p-6 rounded-lg shadow-md space-y-5 mt-[-40px] md:mt-[-60px]"
-      >
-        <h2 className="text-center text-2xl font-semibold text-gray-800">Login</h2>
+      {/* Form centered in remaining space */}
+      <div className="flex-1 flex items-center justify-center px-4">
+        <form
+          onSubmit={handleLogin}
+          className="w-full max-w-sm bg-white p-6 rounded-lg shadow-md space-y-5"
+        >
+          <h2 className="text-center text-2xl font-semibold text-gray-800">
+            Login
+          </h2>
 
-        {/* ✅ Inline error message */}
-        {error && (
-          <div className="text-red-600 text-sm text-center font-medium">
-            {error}
+          {/* ✅ Inline error message */}
+          {error && (
+            <div className="text-red-600 text-sm text-center font-medium">
+              {error}
+            </div>
+          )}
+
+          <div className="space-y-1">
+            <label className="block text-sm text-gray-700">Email Address</label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-green-400"
+              required
+            />
           </div>
-        )}
 
-        <div className="space-y-1">
-          <label className="block text-sm text-gray-700">Email Address</label>
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-green-400"
-            required
-          />
-        </div>
+          <div className="space-y-1">
+            <label className="block text-sm text-gray-700">Password</label>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-green-400"
+              required
+            />
+          </div>
 
-        <div className="space-y-1">
-          <label className="block text-sm text-gray-700">Password</label>
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-green-400"
-            required
-          />
-        </div>
+          <label className="flex items-center text-sm space-x-2 text-gray-600">
+            <input
+              type="checkbox"
+              checked={remember}
+              onChange={() => setRemember(!remember)}
+              className="accent-green-600"
+            />
+            <span>Remember me</span>
+          </label>
 
-        <label className="flex items-center text-sm space-x-2 text-gray-600">
-          <input
-            type="checkbox"
-            checked={remember}
-            onChange={() => setRemember(!remember)}
-            className="accent-green-600"
-          />
-          <span>Remember me</span>
-        </label>
+          <button
+            type="submit"
+            className="w-full bg-green-600 hover:bg-green-700 text-white py-2 rounded-md font-semibold"
+          >
+            Log in
+          </button>
 
-        <button
-          type="submit"
-          className="w-full bg-green-600 hover:bg-green-700 text-white py-2 rounded-md font-semibold"
-        >
-          Log in
-        </button>
-
-        <button
-          type="button"
-          className="w-full text-sm text-blue-600 hover:underline mt-2"
-          onClick={() => router.push("/forgot-password")}
-        >
-          Forgot password?
-        </button>
-      </form>
+          <button
+            type="button"
+            className="w-full text-sm text-blue-600 hover:underline mt-2"
+            onClick={() => router.push("/forgot-password")}
+          >
+            Forgot password?
+          </button>
+        </form>
+      </div>
     </div>
   )
 }
