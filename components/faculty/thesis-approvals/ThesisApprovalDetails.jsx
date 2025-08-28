@@ -17,7 +17,7 @@ export default function ThesisApprovalDetails({ thesis }) {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-6 text-gray-800">
         <div>
-          <p className="font-semibold">Research Area:</p>
+          <p className="font-semibold">Research Topic:</p>
           <p className="text-gray-500">{thesis.area || "N/A"}</p>
 
           <p className="font-semibold mt-4">Proposed Thesis Title:</p>
@@ -31,7 +31,7 @@ export default function ThesisApprovalDetails({ thesis }) {
         </div>
 
         <div>
-          <p className="font-semibold">Motivation</p>
+          <p className="font-semibold">Objective</p>
           <p className="text-gray-500">
             {thesis.motivation || "No description provided."}
           </p>
