@@ -7,9 +7,11 @@ import AdminSidebar from "./admin-sidebar";
 export default function AdminLayout({ children }) {
   return (
     <AdminAuth>
-      <div className="flex min-h-screen">
+      <div className="flex max-h-screen">
         <AdminSidebar />
-        <main className="flex-1 bg-[#f8faf9] p-6 overflow-auto">{children}</main>
+        <main className="flex-1 bg-[#f8faf9] p-6 overflow-auto">
+          {children}
+        </main>
       </div>
     </AdminAuth>
   );
