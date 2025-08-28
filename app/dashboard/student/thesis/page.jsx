@@ -9,6 +9,7 @@ export default function ThesisPage() {
     defense: "Not Scheduled",
   });
   const [eligible, setEligible] = useState(false);
+  const [reason, setReason] = useState(""); // <-- new: reason for ineligibility
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [form, setForm] = useState({
@@ -33,8 +34,8 @@ export default function ThesisPage() {
         const data = await res.json();
 
         if (res.ok && data.progress) {
-          // Eligibility comes from backend
           setEligible(data.eligible || false);
+          setReason(data.reason || "");
 
           const proposalUnlocked = data.progress.find(
             (p) => p.step === "Thesis Proposal"
@@ -69,7 +70,7 @@ export default function ThesisPage() {
     setMessage("");
 
     try {
-      const res = await fetch("http://localhost:8080/api/students/submit", {
+      const res = await fetch("http://localhost:8080/api/students/submit/check", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -84,7 +85,7 @@ export default function ThesisPage() {
         setStatus({ ...status, proposal: "Submitted" });
         setMessage("✅ Thesis proposal submitted successfully!");
       } else {
-        setMessage(data.error || "❌ Failed to submit proposal.");
+        setMessage(data.message || "❌ Failed to submit proposal.");
       }
     } catch (err) {
       console.error(err);
@@ -102,14 +103,23 @@ export default function ThesisPage() {
       <div className="max-w-4xl mx-auto bg-white p-6 rounded-lg shadow-md">
         <h3 className="text-xl font-semibold mb-4">Submit Thesis Proposal</h3>
 
-        {!eligible && (
+        {!eligible && reason && (
           <div className="p-4 mb-4 bg-red-50 border border-red-300 text-red-700 rounded-lg">
-            ⚠️ You are not eligible to submit a thesis proposal yet.  
-            Requirement: <b>CGPA &gt; 2.5</b> and <b>Obtained Credits ≥ 9</b>.
+            ⚠️ You are not eligible to submit a thesis proposal yet. <br />
+            <b>Reason:</b> {reason}
           </div>
         )}
 
         <div className="space-y-4">
+          <input
+            type="text"
+            name="research_topic"
+            placeholder="Research Topic"
+            value={form.research_topic}
+            onChange={handleChange}
+            className="w-full px-4 py-2 border rounded-md"
+            disabled={!eligible}
+          />
           <input
             type="text"
             name="title"
@@ -146,9 +156,7 @@ export default function ThesisPage() {
 
           <button
             onClick={handleSubmitProposal}
-            disabled={
-              loading || status.proposal === "Submitted" || !eligible
-            }
+            disabled={loading || status.proposal === "Submitted" || !eligible}
             className={`py-3 px-6 rounded-md text-white font-semibold ${
               !eligible
                 ? "bg-gray-300 cursor-not-allowed"
@@ -199,9 +207,7 @@ export default function ThesisPage() {
                 }`}
               ></div>
               <span className="text-lg text-black">{step}</span>
-              {index < arr.length - 1 && (
-                <div className="w-12 h-0.5 bg-gray-300"></div>
-              )}
+              {index < arr.length - 1 && <div className="w-12 h-0.5 bg-gray-300"></div>}
             </div>
           ))}
         </div>
