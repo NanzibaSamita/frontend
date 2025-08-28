@@ -20,11 +20,11 @@ export default function FacultySidebar() {
   const [showLogout, setShowLogout] = useState(false);
 
   const navigationItems = [
-    {
-      name: "Course Content",
-      href: "/dashboard/faculty/course",
-      icon: <BookOpen size={18} />,
-    },
+    // {
+    //   name: "Course Content",
+    //   href: "/dashboard/faculty/course",
+    //   icon: <BookOpen size={18} />,
+    // },
     {
       name: "Supervision Requests",
       href: "/dashboard/faculty/supervision",

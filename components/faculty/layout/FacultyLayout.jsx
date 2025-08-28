@@ -1,12 +1,12 @@
-"use client"
+"use client";
 
-import FacultySidebar from "./FacultySidebar"
+import FacultySidebar from "./FacultySidebar";
 
 export default function FacultyLayout({ children }) {
   return (
-    <div className="flex min-h-screen">
+    <div className="flex max-h-screen">
       <FacultySidebar />
       <div className="flex-1 bg-gray-50">{children}</div>
     </div>
-  )
+  );
 }

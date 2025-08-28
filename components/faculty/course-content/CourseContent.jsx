@@ -11,7 +11,7 @@ const CourseContent = () => {
 
   // Set both heading and table in the same flex column with left padding
   return (
-    <div style={{ padding: "40px 0 0 60px", maxWidth: "1100px" }}>
+    <div className="px-10 max-w-[1100px] py-10">
       <h1
         style={{
           fontSize: "2.5rem",
