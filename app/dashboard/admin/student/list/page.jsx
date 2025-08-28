@@ -35,7 +35,7 @@ export default function AdminStudentsPage() {
         <h1 className="text-3xl font-bold mb-8">All Students</h1>
 
         <div className="bg-white shadow-md rounded-md w-full max-w-6xl overflow-x-auto">
-          <table className="min-w-full text-sm text-left">
+          <table className="min-w-full text-sm text-left ">
             <thead className="bg-gray-200">
               <tr>
                 <th className="px-4 py-3 font-semibold">#</th>
