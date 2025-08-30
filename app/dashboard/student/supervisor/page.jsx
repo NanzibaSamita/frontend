@@ -257,14 +257,14 @@ export default function SupervisorPage() {
                           <h4 className="font-semibold">
                             Priority {idx + 1}: {faculty?.user_id?.first_name} {faculty?.user_id?.last_name}
                           </h4>
-                          <p className="text-sm text-gray-600 mt-1">
+                          <p className="text-sm text-gray-800 mt-1">
                             {faculty?.designation} | {faculty?.specialization}
                           </p>
-                          <p className="text-sm text-gray-600">
+                          <p className="text-sm text-gray-800">
                             Department: {faculty?.user_id?.department}
                           </p>
                           {faculty?.research_interests && (
-                            <p className="text-sm text-gray-600 mt-1">
+                            <p className="text-sm text-gray-700 mt-1">
                               Research: {faculty.research_interests}
                             </p>
                           )}
@@ -312,7 +312,7 @@ export default function SupervisorPage() {
 
             <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
               <div className="bg-gray-50 px-6 py-4 border-b">
-                <h3 className="text-xl font-semibold">Your Assigned Supervisor</h3>
+                <h3 className="text-gray-800 font-semibold">Your Assigned Supervisor</h3>
               </div>
               
               <div className="p-6">
@@ -390,7 +390,7 @@ export default function SupervisorPage() {
 
             {/* Show original priority list */}
             <div className="mt-6">
-              <h4 className="font-semibold mb-3">Your Original Priority List</h4>
+              <h4 className="font-semibold text-gray-500">Your Original Priority List</h4>
               <div className="space-y-2">
                 {assignment.priority_list?.map((p, idx) => {
                   const faculty = p.faculty_id;
@@ -404,7 +404,7 @@ export default function SupervisorPage() {
                       }`}
                     >
                       <div className="flex justify-between items-center">
-                        <span>
+                        <span className="text-gray-500">
                           <strong>Priority {idx + 1}:</strong> {faculty?.user_id?.first_name} {faculty?.user_id?.last_name}
                           {isAssigned && <span className="ml-2 text-green-600 font-semibold">(Assigned)</span>}
                         </span>
@@ -451,21 +451,21 @@ export default function SupervisorPage() {
                           <h4 className="font-semibold">
                             Priority {idx + 1}: {faculty?.user_id?.first_name} {faculty?.user_id?.last_name}
                           </h4>
-                          <p className="text-sm text-gray-600 mt-1">
+                          <p className="text-sm text-gray-800 mt-1">
                             {faculty?.designation} | {faculty?.specialization}
                           </p>
-                          <p className="text-sm text-gray-600">
+                          <p className="text-sm text-gray-800">
                             Department: {faculty?.user_id?.department}
                           </p>
-                          <p className="text-sm text-gray-600">
+                          <p className="text-sm text-gray-800">
                             Email: {faculty?.user_id?.email}
                           </p>
                           {faculty?.research_interests && (
-                            <p className="text-sm text-gray-600 mt-1">
+                            <p className="text-sm text-gray-700 mt-1">
                               Research: {faculty.research_interests}
                             </p>
                           )}
-                          <p className="text-sm text-gray-600">
+                          <p className="text-sm text-gray-800">
                             Current Students: {faculty?.current_supervision_count || 0}/{faculty?.max_supervision_capacity || 0}
                           </p>
                         </div>

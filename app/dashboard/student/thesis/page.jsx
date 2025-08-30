@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import axios from "axios";
 
 export default function ThesisPage() {
   const [status, setStatus] = useState({
     proposal: "Not Submitted",
-    thesis: "Not Submitted", 
+    thesis: "Not Submitted",
     defense: "Not Scheduled",
   });
   const [eligible, setEligible] = useState(false);
@@ -26,55 +27,57 @@ export default function ThesisPage() {
     references: "",
   });
 
-  // Fetch current thesis progress + eligibility
+  // ✅ Fetch current thesis progress + eligibility
   useEffect(() => {
     const fetchData = async () => {
       try {
-        setPageLoading(true);
-        const token = localStorage.getItem("token");
-        
-        // Use the correct thesis progress endpoint
-        const res = await fetch("http://localhost:8080/api/students/thesis/progress", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        
-        if (res.ok) {
-          const data = await res.json();
-          
-          setEligible(data.eligible || false);
-          setReason(data.reason || "");
-          setProposalSubmitted(data.proposalSubmitted || false);
-          setStudentInfo(data.studentInfo || null);
+        setLoading(true);
 
-          if (data.progress) {
-            const proposalUnlocked = data.progress.find(
-              (p) => p.step === "Thesis Proposal"
-            )?.unlocked;
-            const thesisUnlocked = data.progress.find(
-              (p) => p.step === "Thesis Upload"
-            )?.unlocked;
-            const defenseUnlocked = data.progress.find(
-              (p) => p.step === "Defense"
-            )?.unlocked;
-
-            setStatus({
-              proposal: proposalSubmitted ? "Submitted" : "Not Submitted",
-              thesis: thesisUnlocked ? "Submitted" : "Not Submitted",
-              defense: defenseUnlocked ? "Scheduled" : "Not Scheduled",
-            });
-          }
-        } else {
-          setMessage("Failed to load thesis progress data.");
+        const token = localStorage.getItem("token"); // <--- ADD THIS
+        if (!token) {
+          setMessage("You are not logged in.");
+          setEligible(false);
+          setPageLoading(false);
+          return;
         }
-      } catch (err) {
-        console.error("Error fetching progress:", err);
-        setMessage("Error loading data.");
+
+        const res = await axios.get(
+          "http://localhost:8080/api/students/progress",
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+        const data = res.data;
+        console.log("API response:", data);
+
+        // Set eligibility
+        if (data.isEligible !== undefined) {
+          setEligible(data.isEligible);
+        } else {
+          const proposalUnlocked = data.progress?.find(
+            (p) => p.step === "Thesis Proposal"
+          )?.unlocked;
+          setEligible(!!proposalUnlocked);
+        }
+
+        if (data.studentInfo) setStudentInfo(data.studentInfo);
+        if (data.message) setMessage(data.message);
+      } catch (error) {
+        console.error("Error fetching data:", error);
+        setMessage("Failed to load data.");
+        setEligible(false);
       } finally {
+        setLoading(false);
         setPageLoading(false);
       }
     };
+
     fetchData();
   }, []);
+
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -86,8 +89,14 @@ export default function ThesisPage() {
       return;
     }
 
-    // Validate required fields
-    if (!form.research_topic || !form.title || !form.background || !form.objective || !form.methodology) {
+    // ✅ Validate required fields
+    if (
+      !form.research_topic ||
+      !form.title ||
+      !form.background ||
+      !form.objective ||
+      !form.methodology
+    ) {
       setMessage("Please fill in all required fields.");
       return;
     }
@@ -97,14 +106,17 @@ export default function ThesisPage() {
     setMessage("");
 
     try {
-      const res = await fetch("http://localhost:8080/api/students/submit/check", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(form),
-      });
+      const res = await fetch(
+        "http://localhost:8080/api/students/submit/check",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(form),
+        }
+      );
 
       const data = await res.json();
 
@@ -112,8 +124,8 @@ export default function ThesisPage() {
         setStatus({ ...status, proposal: "Submitted" });
         setProposalSubmitted(true);
         setMessage("Thesis proposal submitted successfully!");
-        
-        // Clear form after successful submission
+
+        // ✅ Clear form after successful submission
         setForm({
           research_topic: "",
           title: "",
@@ -158,16 +170,21 @@ export default function ThesisPage() {
             <strong>Eligible:</strong> You can submit your thesis proposal.
             {studentInfo && (
               <div className="mt-2 text-sm">
-                CGPA: {studentInfo.cgpa} | Credits: {studentInfo.credits} | Supervisor: {studentInfo.hasSupervisor ? 'Assigned' : 'Not Assigned'}
+                CGPA: {studentInfo.cgpa} | Credits: {studentInfo.credits} |
+                Supervisor:{" "}
+                {studentInfo.hasSupervisor ? "Assigned" : "Not Assigned"}
               </div>
             )}
           </div>
         ) : (
           <div className="p-4 bg-red-50 border border-red-300 text-red-700 rounded-lg">
-            <strong>Not Eligible:</strong> {reason}
+            <strong>Not Eligible:</strong> You cannot submit a thesis proposal
+            yet.
             {studentInfo && (
               <div className="mt-2 text-sm">
-                CGPA: {studentInfo.cgpa} | Credits: {studentInfo.credits} | Supervisor: {studentInfo.hasSupervisor ? 'Assigned' : 'Not Assigned'}
+                CGPA: {studentInfo.cgpa} | Credits: {studentInfo.credits} |
+                Supervisor:{" "}
+                {studentInfo.hasSupervisor ? "Assigned" : "Not Assigned"}
               </div>
             )}
           </div>
@@ -177,16 +194,19 @@ export default function ThesisPage() {
       {/* Proposal Submission Form */}
       <div className="max-w-4xl mx-auto bg-white p-6 rounded-lg shadow-md mb-8">
         <h3 className="text-xl font-semibold mb-4">
-          {proposalSubmitted ? "Thesis Proposal (Submitted)" : "Submit Thesis Proposal"}
+          {proposalSubmitted
+            ? "Thesis Proposal (Submitted)"
+            : "Submit Thesis Proposal"}
         </h3>
 
         {proposalSubmitted && (
-          <div className="p-4 mb-4 bg-green-50 border border-green-300 text-green-700 rounded-lg">
+          <div className="p-4 mb-4 bg-green-50 border-green-300 text-green-700 rounded-lg">
             Your thesis proposal has been submitted and is under review.
           </div>
         )}
 
         <div className="space-y-4">
+          {/* Inputs for proposal submission */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Research Topic *
@@ -332,11 +352,15 @@ export default function ThesisPage() {
           </button>
 
           {message && (
-            <div className={`p-3 border rounded-lg ${
-              message.includes('successfully') ? 'bg-green-50 border-green-300 text-green-800' :
-              message.includes('Error') || message.includes('Failed') ? 'bg-red-50 border-red-300 text-red-700' :
-              'bg-blue-50 border-blue-300 text-blue-800'
-            }`}>
+            <div
+              className={`p-3 border rounded-lg ${
+                message.includes("successfully")
+                  ? "bg-green-50 border-green-300 text-green-800"
+                  : message.includes("Error") || message.includes("Failed")
+                  ? "bg-red-50 border-red-300 text-red-700"
+                  : "bg-blue-50 border-blue-300 text-blue-800"
+              }`}
+            >
               {message}
             </div>
           )}
@@ -350,44 +374,62 @@ export default function ThesisPage() {
           <div className="space-y-4">
             {[
               { name: "Supervisor Assignment", status: "completed" },
-              { name: "Thesis Proposal", status: status.proposal === "Submitted" ? "completed" : "pending" },
-              { name: "Thesis Upload", status: status.thesis === "Submitted" ? "completed" : "locked" },
+              {
+                name: "Thesis Proposal",
+                status: status.proposal === "Submitted" ? "completed" : "pending",
+              },
+              {
+                name: "Thesis Upload",
+                status: status.thesis === "Submitted" ? "completed" : "locked",
+              },
               { name: "Predefense", status: "locked" },
-              { name: "Defense", status: status.defense === "Scheduled" ? "completed" : "locked" },
+              {
+                name: "Defense",
+                status: status.defense === "Scheduled" ? "completed" : "locked",
+              },
             ].map((step, index, arr) => (
               <div key={index} className="flex items-center space-x-4">
                 <div
                   className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold ${
                     step.status === "completed"
                       ? "bg-green-600 text-white"
-                      : step.status === "pending" 
+                      : step.status === "pending"
                       ? "bg-yellow-500 text-white"
                       : "bg-gray-300 text-gray-600"
                   }`}
                 >
                   {step.status === "completed" ? "✓" : index + 1}
                 </div>
-                
+
                 <div className="flex-1">
-                  <span className={`text-lg ${
-                    step.status === "completed" ? "text-green-700 font-semibold" :
-                    step.status === "pending" ? "text-yellow-700 font-semibold" :
-                    "text-gray-500"
-                  }`}>
+                  <span
+                    className={`text-lg ${
+                      step.status === "completed"
+                        ? "text-green-700 font-semibold"
+                        : step.status === "pending"
+                        ? "text-yellow-700 font-semibold"
+                        : "text-gray-500"
+                    }`}
+                  >
                     {step.name}
                   </span>
-                  
+
                   <div className="text-sm text-gray-600">
                     {step.status === "completed" && "Completed"}
                     {step.status === "pending" && "In Progress"}
-                    {step.status === "locked" && "Locked - Complete previous steps"}
+                    {step.status === "locked" &&
+                      "Locked - Complete previous steps"}
                   </div>
                 </div>
 
                 {index < arr.length - 1 && (
-                  <div className={`w-px h-8 ${
-                    step.status === "completed" ? "bg-green-300" : "bg-gray-300"
-                  }`}></div>
+                  <div
+                    className={`w-px h-8 ${
+                      step.status === "completed"
+                        ? "bg-green-300"
+                        : "bg-gray-300"
+                    }`}
+                  ></div>
                 )}
               </div>
             ))}

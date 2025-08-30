@@ -160,7 +160,7 @@ export default function SupervisionRequests() {
               <tr key={assignment._id} className="border-t">
                 <Td>{`${user.first_name || ''} ${user.last_name || ''}`.trim() || '—'}</Td>
                 <Td>{student.student_number || '—'}</Td>
-                <Td>{program.degree_type || program.program_name || '—'}</Td>
+                <Td>{program || '—'}</Td>
                 <Td>{`${facultyUser.first_name || ''} ${facultyUser.last_name || ''}`.trim() || '—'}</Td>
                 <Td>{formatDate(assignment.createdAt)}</Td>
                 <Td className="text-right">
@@ -204,11 +204,11 @@ function DetailDropDown({ assignment, showActions = true, onComment, onApprove, 
   const studentInfo = {
     Name: studentName,
     ID: student.student_number || '—',
-    Program: program.degree_type || program.program_name || '—',
+    Program: program || '—',
     "Admission Year": student.admission_year || '—',
     "Current Semester": student.current_semester || '—',
     CGPA: student.cgpa || '—',
-    "Credits (Completed/Total)": `${student.obtained_credits || 0}/${student.total_credit_hours || 0}`,
+    "Credits (Completed/Total)": `${student.obtained_credits || 0}`,
     "Research Area": student.research_area || '—',
     Status: student.status || '—',
     Contact: user.email || '—',
@@ -226,7 +226,7 @@ function DetailDropDown({ assignment, showActions = true, onComment, onApprove, 
   const summary = {
     student: studentName,
     id: student.student_number || '—',
-    program: program.degree_type || program.program_name || '—',
+    program: program || '—',
     sup: facultyName,
     date: new Date(assignment.createdAt).toLocaleDateString("en-GB") || '—',
   };
