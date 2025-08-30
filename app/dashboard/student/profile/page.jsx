@@ -17,16 +17,17 @@ export default function StudentProfile() {
           setLoading(false);
           return;
         }
-
+        
         const res = await fetch("http://localhost:8080/api/students/profile", {
           headers: { Authorization: `Bearer ${token}` },
         });
-
+        console.log(res.data)
         if (!res.ok) {
           throw new Error((await res.json()).message || "Failed to load profile");
         }
 
         const data = await res.json();
+        console.log(data)
         setProfile(data);
         setLoading(false);
       } catch (err) {
