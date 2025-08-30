@@ -5,15 +5,18 @@ import { useState, useEffect } from "react";
 export default function ThesisPage() {
   const [status, setStatus] = useState({
     proposal: "Not Submitted",
-    thesis: "Not Submitted",
+    thesis: "Not Submitted", 
     defense: "Not Scheduled",
   });
   const [eligible, setEligible] = useState(false);
-  const [reason, setReason] = useState(""); // <-- new: reason for ineligibility
+  const [reason, setReason] = useState("");
   const [loading, setLoading] = useState(false);
+  const [pageLoading, setPageLoading] = useState(true);
   const [message, setMessage] = useState("");
+  const [proposalSubmitted, setProposalSubmitted] = useState(false);
+  const [studentInfo, setStudentInfo] = useState(null);
   const [form, setForm] = useState({
-    supervisor_id: "",
+    research_topic: "",
     title: "",
     background: "",
     objective: "",
@@ -27,34 +30,47 @@ export default function ThesisPage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
+        setPageLoading(true);
         const token = localStorage.getItem("token");
-        const res = await fetch("http://localhost:8080/api/students/progress", {
+        
+        // Use the correct thesis progress endpoint
+        const res = await fetch("http://localhost:8080/api/students/thesis/progress", {
           headers: { Authorization: `Bearer ${token}` },
         });
-        const data = await res.json();
-
-        if (res.ok && data.progress) {
+        
+        if (res.ok) {
+          const data = await res.json();
+          
           setEligible(data.eligible || false);
           setReason(data.reason || "");
+          setProposalSubmitted(data.proposalSubmitted || false);
+          setStudentInfo(data.studentInfo || null);
 
-          const proposalUnlocked = data.progress.find(
-            (p) => p.step === "Thesis Proposal"
-          )?.unlocked;
-          const thesisUnlocked = data.progress.find(
-            (p) => p.step === "Thesis Upload"
-          )?.unlocked;
-          const defenseUnlocked = data.progress.find(
-            (p) => p.step === "Defense"
-          )?.unlocked;
+          if (data.progress) {
+            const proposalUnlocked = data.progress.find(
+              (p) => p.step === "Thesis Proposal"
+            )?.unlocked;
+            const thesisUnlocked = data.progress.find(
+              (p) => p.step === "Thesis Upload"
+            )?.unlocked;
+            const defenseUnlocked = data.progress.find(
+              (p) => p.step === "Defense"
+            )?.unlocked;
 
-          setStatus({
-            proposal: proposalUnlocked ? "Submitted" : "Not Submitted",
-            thesis: thesisUnlocked ? "Submitted" : "Not Submitted",
-            defense: defenseUnlocked ? "Scheduled" : "Not Scheduled",
-          });
+            setStatus({
+              proposal: proposalSubmitted ? "Submitted" : "Not Submitted",
+              thesis: thesisUnlocked ? "Submitted" : "Not Submitted",
+              defense: defenseUnlocked ? "Scheduled" : "Not Scheduled",
+            });
+          }
+        } else {
+          setMessage("Failed to load thesis progress data.");
         }
       } catch (err) {
         console.error("Error fetching progress:", err);
+        setMessage("Error loading data.");
+      } finally {
+        setPageLoading(false);
       }
     };
     fetchData();
@@ -65,6 +81,17 @@ export default function ThesisPage() {
   };
 
   const handleSubmitProposal = async () => {
+    if (!eligible) {
+      setMessage("You are not eligible to submit a thesis proposal yet.");
+      return;
+    }
+
+    // Validate required fields
+    if (!form.research_topic || !form.title || !form.background || !form.objective || !form.methodology) {
+      setMessage("Please fill in all required fields.");
+      return;
+    }
+
     const token = localStorage.getItem("token");
     setLoading(true);
     setMessage("");
@@ -83,101 +110,233 @@ export default function ThesisPage() {
 
       if (res.ok) {
         setStatus({ ...status, proposal: "Submitted" });
-        setMessage("✅ Thesis proposal submitted successfully!");
+        setProposalSubmitted(true);
+        setMessage("Thesis proposal submitted successfully!");
+        
+        // Clear form after successful submission
+        setForm({
+          research_topic: "",
+          title: "",
+          background: "",
+          objective: "",
+          methodology: "",
+          estimated_cost: "",
+          timeline: "",
+          references: "",
+        });
       } else {
-        setMessage(data.message || "❌ Failed to submit proposal.");
+        setMessage(data.message || "Failed to submit proposal.");
       }
     } catch (err) {
       console.error(err);
-      setMessage("⚠️ Error submitting thesis proposal.");
+      setMessage("Error submitting thesis proposal.");
     } finally {
       setLoading(false);
     }
   };
 
+  if (pageLoading) {
+    return (
+      <main className="flex-1 p-8">
+        <div className="max-w-4xl mx-auto bg-white p-6 rounded-lg shadow-md">
+          <div className="flex justify-center items-center h-64">
+            <div className="text-gray-500">Loading thesis information...</div>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
   return (
     <main className="flex-1 p-8">
       <h2 className="text-3xl font-semibold text-black mb-8">Thesis</h2>
 
-      {/* Proposal Submission Form */}
-      <div className="max-w-4xl mx-auto bg-white p-6 rounded-lg shadow-md">
-        <h3 className="text-xl font-semibold mb-4">Submit Thesis Proposal</h3>
+      {/* Eligibility Status */}
+      <div className="max-w-4xl mx-auto mb-6">
+        {eligible ? (
+          <div className="p-4 bg-green-50 border border-green-300 text-green-800 rounded-lg">
+            <strong>Eligible:</strong> You can submit your thesis proposal.
+            {studentInfo && (
+              <div className="mt-2 text-sm">
+                CGPA: {studentInfo.cgpa} | Credits: {studentInfo.credits} | Supervisor: {studentInfo.hasSupervisor ? 'Assigned' : 'Not Assigned'}
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="p-4 bg-red-50 border border-red-300 text-red-700 rounded-lg">
+            <strong>Not Eligible:</strong> {reason}
+            {studentInfo && (
+              <div className="mt-2 text-sm">
+                CGPA: {studentInfo.cgpa} | Credits: {studentInfo.credits} | Supervisor: {studentInfo.hasSupervisor ? 'Assigned' : 'Not Assigned'}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
 
-        {!eligible && reason && (
-          <div className="p-4 mb-4 bg-red-50 border border-red-300 text-red-700 rounded-lg">
-            ⚠️ You are not eligible to submit a thesis proposal yet. <br />
-            <b>Reason:</b> {reason}
+      {/* Proposal Submission Form */}
+      <div className="max-w-4xl mx-auto bg-white p-6 rounded-lg shadow-md mb-8">
+        <h3 className="text-xl font-semibold mb-4">
+          {proposalSubmitted ? "Thesis Proposal (Submitted)" : "Submit Thesis Proposal"}
+        </h3>
+
+        {proposalSubmitted && (
+          <div className="p-4 mb-4 bg-green-50 border border-green-300 text-green-700 rounded-lg">
+            Your thesis proposal has been submitted and is under review.
           </div>
         )}
 
         <div className="space-y-4">
-          <input
-            type="text"
-            name="research_topic"
-            placeholder="Research Topic"
-            value={form.research_topic}
-            onChange={handleChange}
-            className="w-full px-4 py-2 border rounded-md"
-            disabled={!eligible}
-          />
-          <input
-            type="text"
-            name="title"
-            placeholder="Thesis Title"
-            value={form.title}
-            onChange={handleChange}
-            className="w-full px-4 py-2 border rounded-md"
-            disabled={!eligible}
-          />
-          <textarea
-            name="background"
-            placeholder="Background"
-            value={form.background}
-            onChange={handleChange}
-            className="w-full px-4 py-2 border rounded-md"
-            disabled={!eligible}
-          />
-          <textarea
-            name="objective"
-            placeholder="Objective"
-            value={form.objective}
-            onChange={handleChange}
-            className="w-full px-4 py-2 border rounded-md"
-            disabled={!eligible}
-          />
-          <textarea
-            name="methodology"
-            placeholder="Methodology"
-            value={form.methodology}
-            onChange={handleChange}
-            className="w-full px-4 py-2 border rounded-md"
-            disabled={!eligible}
-          />
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Research Topic *
+            </label>
+            <input
+              type="text"
+              name="research_topic"
+              placeholder="Enter your research topic"
+              value={form.research_topic}
+              onChange={handleChange}
+              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              disabled={!eligible || proposalSubmitted}
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Thesis Title *
+            </label>
+            <input
+              type="text"
+              name="title"
+              placeholder="Enter your thesis title"
+              value={form.title}
+              onChange={handleChange}
+              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              disabled={!eligible || proposalSubmitted}
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Background *
+            </label>
+            <textarea
+              name="background"
+              placeholder="Describe the background and context of your research"
+              value={form.background}
+              onChange={handleChange}
+              rows={4}
+              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              disabled={!eligible || proposalSubmitted}
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Objective *
+            </label>
+            <textarea
+              name="objective"
+              placeholder="State your research objectives"
+              value={form.objective}
+              onChange={handleChange}
+              rows={3}
+              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              disabled={!eligible || proposalSubmitted}
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Methodology *
+            </label>
+            <textarea
+              name="methodology"
+              placeholder="Describe your research methodology"
+              value={form.methodology}
+              onChange={handleChange}
+              rows={4}
+              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              disabled={!eligible || proposalSubmitted}
+            />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Estimated Cost
+              </label>
+              <input
+                type="text"
+                name="estimated_cost"
+                placeholder="Enter estimated cost"
+                value={form.estimated_cost}
+                onChange={handleChange}
+                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                disabled={!eligible || proposalSubmitted}
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Timeline
+              </label>
+              <input
+                type="text"
+                name="timeline"
+                placeholder="Enter expected timeline"
+                value={form.timeline}
+                onChange={handleChange}
+                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                disabled={!eligible || proposalSubmitted}
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              References
+            </label>
+            <textarea
+              name="references"
+              placeholder="List your references"
+              value={form.references}
+              onChange={handleChange}
+              rows={3}
+              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              disabled={!eligible || proposalSubmitted}
+            />
+          </div>
 
           <button
             onClick={handleSubmitProposal}
-            disabled={loading || status.proposal === "Submitted" || !eligible}
+            disabled={loading || proposalSubmitted || !eligible}
             className={`py-3 px-6 rounded-md text-white font-semibold ${
               !eligible
                 ? "bg-gray-300 cursor-not-allowed"
+                : proposalSubmitted
+                ? "bg-gray-300 cursor-not-allowed"
                 : loading
                 ? "bg-gray-400"
-                : status.proposal === "Submitted"
-                ? "bg-gray-300 cursor-not-allowed"
                 : "bg-green-600 hover:bg-green-700"
             }`}
           >
             {!eligible
               ? "Not Eligible"
-              : status.proposal === "Submitted"
-              ? "Submitted"
+              : proposalSubmitted
+              ? "Already Submitted"
               : loading
               ? "Submitting..."
               : "Submit Proposal"}
           </button>
 
           {message && (
-            <div className="p-3 bg-blue-50 border border-blue-300 text-blue-800 rounded-lg">
+            <div className={`p-3 border rounded-lg ${
+              message.includes('successfully') ? 'bg-green-50 border-green-300 text-green-800' :
+              message.includes('Error') || message.includes('Failed') ? 'bg-red-50 border-red-300 text-red-700' :
+              'bg-blue-50 border-blue-300 text-blue-800'
+            }`}>
               {message}
             </div>
           )}
@@ -185,31 +344,54 @@ export default function ThesisPage() {
       </div>
 
       {/* Thesis Progress Timeline */}
-      <div className="mt-8">
-        <h3 className="text-2xl font-semibold mb-4">Thesis Status</h3>
-        <div className="flex items-center space-x-4 flex-wrap">
-          {[
-            "Supervisor Assignment",
-            "Thesis Proposal",
-            "Thesis Upload",
-            "Predefense",
-            "Defense",
-          ].map((step, index, arr) => (
-            <div key={index} className="flex items-center space-x-2">
-              <div
-                className={`w-3 h-3 rounded-full ${
-                  (step === "Thesis Proposal" && status.proposal === "Submitted") ||
-                  (step === "Thesis Upload" && status.thesis === "Submitted") ||
-                  (step === "Defense" && status.defense === "Scheduled") ||
-                  step === "Supervisor Assignment"
-                    ? "bg-green-600"
-                    : "bg-gray-300"
-                }`}
-              ></div>
-              <span className="text-lg text-black">{step}</span>
-              {index < arr.length - 1 && <div className="w-12 h-0.5 bg-gray-300"></div>}
-            </div>
-          ))}
+      <div className="max-w-4xl mx-auto">
+        <h3 className="text-2xl font-semibold mb-6">Thesis Progress</h3>
+        <div className="bg-white p-6 rounded-lg shadow-md">
+          <div className="space-y-4">
+            {[
+              { name: "Supervisor Assignment", status: "completed" },
+              { name: "Thesis Proposal", status: status.proposal === "Submitted" ? "completed" : "pending" },
+              { name: "Thesis Upload", status: status.thesis === "Submitted" ? "completed" : "locked" },
+              { name: "Predefense", status: "locked" },
+              { name: "Defense", status: status.defense === "Scheduled" ? "completed" : "locked" },
+            ].map((step, index, arr) => (
+              <div key={index} className="flex items-center space-x-4">
+                <div
+                  className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold ${
+                    step.status === "completed"
+                      ? "bg-green-600 text-white"
+                      : step.status === "pending" 
+                      ? "bg-yellow-500 text-white"
+                      : "bg-gray-300 text-gray-600"
+                  }`}
+                >
+                  {step.status === "completed" ? "✓" : index + 1}
+                </div>
+                
+                <div className="flex-1">
+                  <span className={`text-lg ${
+                    step.status === "completed" ? "text-green-700 font-semibold" :
+                    step.status === "pending" ? "text-yellow-700 font-semibold" :
+                    "text-gray-500"
+                  }`}>
+                    {step.name}
+                  </span>
+                  
+                  <div className="text-sm text-gray-600">
+                    {step.status === "completed" && "Completed"}
+                    {step.status === "pending" && "In Progress"}
+                    {step.status === "locked" && "Locked - Complete previous steps"}
+                  </div>
+                </div>
+
+                {index < arr.length - 1 && (
+                  <div className={`w-px h-8 ${
+                    step.status === "completed" ? "bg-green-300" : "bg-gray-300"
+                  }`}></div>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </main>
