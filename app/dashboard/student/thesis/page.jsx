@@ -293,7 +293,7 @@ export default function ThesisPage() {
             yet.
             {studentInfo && (
               <div className="mt-2 text-sm">
-                CGPA: {studentInfo.cgpa} | Credits: {studentInfo.credits} |
+                CGPA: {studentInfo.cgpa} | Credits: {studentInfo.obtained_credits} |
                 Supervisor:{" "}
                 {studentInfo.hasSupervisor ? "Assigned" : "Not Assigned"}
               </div>
