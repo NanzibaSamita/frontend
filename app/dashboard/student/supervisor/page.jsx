@@ -433,7 +433,7 @@ export default function SupervisorPage() {
             </div>
 
             <div className="mb-6">
-              <h3 className="text-xl font-semibold mb-4">Your Priority List</h3>
+              <h3 className="text-xl text-gray-700 font-semibold mb-4">Your Priority List</h3>
               <div className="space-y-3">
                 {assignment.priority_list?.map((p, idx) => {
                   const faculty = p.faculty_id;
