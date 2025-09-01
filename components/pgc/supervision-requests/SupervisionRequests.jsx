@@ -31,10 +31,7 @@ export default function SupervisionRequests() {
   const formatDate = (iso) => {
     if (!iso) return "—";
     const d = new Date(iso);
-    const dd = String(d.getDate()).padStart(2, "0");
-    const mm = String(d.getMonth() + 1).padStart(2, "0");
-    const yyyy = d.getFullYear();
-    return `${dd}/${mm}/${yyyy}`;
+    return d.toLocaleDateString("en-GB"); // dd/mm/yyyy
   };
 
   const loadData = useCallback(async () => {
@@ -42,18 +39,23 @@ export default function SupervisionRequests() {
       setLoading(true);
       setError("");
 
-      if (typeof window !== "undefined" && !sessionStorage.getItem("token") && !localStorage.getItem("token")) {
+      if (
+        typeof window !== "undefined" &&
+        !sessionStorage.getItem("token") &&
+        !localStorage.getItem("token")
+      ) {
         setError("Not authenticated. Please log in first.");
         setLoading(false);
         return;
       }
 
-      const pendingRes = await api.get(PGC_PENDING_URL);
+      const [pendingRes, assignedRes] = await Promise.all([
+        api.get(PGC_PENDING_URL),
+        api.get(PGC_ASSIGNED_URL),
+      ]);
+
       setPending(pendingRes?.data?.assignments ?? []);
-
-      const assignedRes = await api.get(PGC_ASSIGNED_URL);
       setAssigned(assignedRes?.data?.assignments ?? []);
-
     } catch (e) {
       const msg = e?.response?.data?.message || e.message;
       setError(`Failed to load: ${msg}`);
@@ -63,7 +65,9 @@ export default function SupervisionRequests() {
     }
   }, [api]);
 
-  useEffect(() => { loadData(); }, [loadData]);
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   const pgcRespond = async (assignmentId, response) => {
     try {
@@ -84,19 +88,18 @@ export default function SupervisionRequests() {
     alert(`Comment functionality for ${studentName}`);
   };
 
-  /* -------------------- Helpers -------------------- */
   const getCurrentFaculty = (assignment) => {
     if (!assignment.priority_list || !assignment.priority_list.length) return {};
     const currentIndex = assignment.current_priority_index || 0;
     const faculty = assignment.priority_list[currentIndex]?.faculty_id || {};
     const user = faculty?.user_id || {};
-    return { ...faculty, user };
+    return { ...faculty, user_id: user };
   };
 
   const getFacultyName = (faculty) => {
     if (!faculty) return "—";
-    const user = faculty.user || {};
-    return `${user.first_name || ''} ${user.last_name || ''}`.trim() || '—';
+    const user = faculty.user_id || {};
+    return `${user.first_name || ""} ${user.last_name || ""}`.trim() || "—";
   };
 
   if (loading) return <div className="p-10">Loading…</div>;
@@ -112,19 +115,22 @@ export default function SupervisionRequests() {
           {pending.map((assignment) => {
             const student = assignment.student_id || {};
             const user = student.user_id || {};
-            const program = student.program_id || {};
             const faculty = getCurrentFaculty(assignment);
-            
+
             return (
               <tr key={assignment._id} className="border-t">
-                <Td>{`${user.first_name || ''} ${user.last_name || ''}`.trim() || '—'}</Td>
-                <Td>{student.student_number || '—'}</Td>
-                <Td>{program.degree_type || program.program_name || '—'}</Td>
+                <Td>{`${user.first_name || ""} ${user.last_name || ""}`.trim() || "—"}</Td>
+                <Td>{student.student_number || "—"}</Td>
+                <Td>{student.program_id || "—"}</Td>
                 <Td>{getFacultyName(faculty)}</Td>
                 <Td>{formatDate(assignment.createdAt)}</Td>
                 <Td className="text-right">
                   <button
-                    onClick={() => setOpenPendingFor(cur => cur?._id === assignment._id ? null : assignment)}
+                    onClick={() =>
+                      setOpenPendingFor((cur) =>
+                        cur?._id === assignment._id ? null : assignment
+                      )
+                    }
                     className="px-3 py-1 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded"
                   >
                     {openPendingFor?._id === assignment._id ? "Hide" : "View"}
@@ -152,20 +158,23 @@ export default function SupervisionRequests() {
           {assigned.map((assignment) => {
             const student = assignment.student_id || {};
             const user = student.user_id || {};
-            const program = student.program_id || {};
             const faculty = assignment.accepted_faculty || {};
             const facultyUser = faculty.user_id || {};
 
             return (
               <tr key={assignment._id} className="border-t">
-                <Td>{`${user.first_name || ''} ${user.last_name || ''}`.trim() || '—'}</Td>
-                <Td>{student.student_number || '—'}</Td>
-                <Td>{program || '—'}</Td>
-                <Td>{`${facultyUser.first_name || ''} ${facultyUser.last_name || ''}`.trim() || '—'}</Td>
+                <Td>{`${user.first_name || ""} ${user.last_name || ""}`.trim() || "—"}</Td>
+                <Td>{student.student_number || "—"}</Td>
+                <Td>{student.program_id || "—"}</Td>
+                <Td>{`${facultyUser.first_name || ""} ${facultyUser.last_name || ""}`.trim() || "—"}</Td>
                 <Td>{formatDate(assignment.createdAt)}</Td>
                 <Td className="text-right">
                   <button
-                    onClick={() => setOpenAssignedFor(cur => cur?._id === assignment._id ? null : assignment)}
+                    onClick={() =>
+                      setOpenAssignedFor((cur) =>
+                        cur?._id === assignment._id ? null : assignment
+                      )
+                    }
                     className="px-3 py-1 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded"
                   >
                     {openAssignedFor?._id === assignment._id ? "Hide" : "View"}
@@ -188,47 +197,47 @@ export default function SupervisionRequests() {
 function DetailDropDown({ assignment, showActions = true, onComment, onApprove, onReject }) {
   const student = assignment.student_id || {};
   const user = student.user_id || {};
-  const program = student.program_id || {};
 
+  // pick faculty depending on assignment status
   let faculty = {};
-  if (assignment.overall_status === 'Assigned') {
+  if (assignment.overall_status === "Assigned") {
     faculty = assignment.accepted_faculty || {};
   } else {
     faculty = assignment.priority_list?.[assignment.current_priority_index || 0]?.faculty_id || {};
   }
   const facultyUser = faculty.user_id || {};
 
-  const studentName = `${user.first_name || ''} ${user.last_name || ''}`.trim() || '—';
-  const facultyName = `${facultyUser.first_name || ''} ${facultyUser.last_name || ''}`.trim() || '—';
+  const studentName = `${user.first_name || ""} ${user.last_name || ""}`.trim() || "—";
+  const facultyName = `${facultyUser.first_name || ""} ${facultyUser.last_name || ""}`.trim() || "—";
 
   const studentInfo = {
     Name: studentName,
-    ID: student.student_number || '—',
-    Program: program || '—',
-    "Admission Year": student.admission_year || '—',
-    "Current Semester": student.current_semester || '—',
-    CGPA: student.cgpa || '—',
-    "Credits (Completed/Total)": `${student.obtained_credits || 0}`,
-    "Research Area": student.research_area || '—',
-    Status: student.status || '—',
-    Contact: user.email || '—',
+    ID: student.student_number || "—",
+    Program: student.program_id || "—",
+    "Admission Year": student.admission_year || "—",
+    "Current Semester": student.current_semester || "—",
+    CGPA: student.cgpa || "—",
+    "Credits (Completed/Total)": `${student.obtained_credits || 0}/${student.total_credit_hours || 0}`,
+    "Research Area": student.research_area || "—",
+    Status: student.status || "—",
+    Contact: user.email || "—",
   };
 
   const supervisorInfo = {
     Name: facultyName,
-    ID: faculty.employee_id || '—',
-    Department: facultyUser.department || '—',
-    Domain: faculty.research_interests || '—',
+    ID: faculty.employee_id || "—",
+    Department: facultyUser.department || "—",
+    Domain: faculty.research_interests || "—",
     "Students Supervised": `${faculty.current_supervision_count || 0}/${faculty.max_supervision_capacity || 0}`,
-    Contact: facultyUser.email || '—',
+    Contact: facultyUser.email || "—",
   };
 
   const summary = {
     student: studentName,
-    id: student.student_number || '—',
-    program: program || '—',
+    id: student.student_number || "—",
+    program: student.program_id || "—",
     sup: facultyName,
-    date: new Date(assignment.createdAt).toLocaleDateString("en-GB") || '—',
+    date: new Date(assignment.createdAt).toLocaleDateString("en-GB") || "—",
   };
 
   return (
@@ -260,20 +269,39 @@ function DetailDropDown({ assignment, showActions = true, onComment, onApprove, 
       {/* Two-column info */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4">
         <InfoCard title="Student Information">
-          {Object.entries(studentInfo).map(([k, v]) => <InfoRow key={k} label={k} value={v} />)}
+          {Object.entries(studentInfo).map(([k, v]) => (
+            <InfoRow key={k} label={k} value={v} />
+          ))}
         </InfoCard>
 
         <InfoCard title="Supervisor Information">
-          {Object.entries(supervisorInfo).map(([k, v]) => <InfoRow key={k} label={k} value={v} />)}
+          {Object.entries(supervisorInfo).map(([k, v]) => (
+            <InfoRow key={k} label={k} value={v} />
+          ))}
         </InfoCard>
       </div>
 
       {/* Actions */}
       {showActions && (
         <div className="flex gap-3 px-4 pb-4">
-          <button onClick={onComment} className="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded">Comment</button>
-          <button onClick={onApprove} className="px-4 py-2 text-sm bg-green-600 hover:bg-green-700 text-white rounded">Approve</button>
-          <button onClick={onReject} className="px-4 py-2 text-sm bg-red-600 hover:bg-red-700 text-white rounded">Reject</button>
+          <button
+            onClick={onComment}
+            className="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded"
+          >
+            Comment
+          </button>
+          <button
+            onClick={onApprove}
+            className="px-4 py-2 text-sm bg-green-600 hover:bg-green-700 text-white rounded"
+          >
+            Approve
+          </button>
+          <button
+            onClick={onReject}
+            className="px-4 py-2 text-sm bg-red-600 hover:bg-red-700 text-white rounded"
+          >
+            Reject
+          </button>
         </div>
       )}
     </div>
@@ -296,7 +324,11 @@ function Table({ headers, children }) {
       <table className="w-full text-sm">
         <thead>
           <tr className="bg-gray-50 text-gray-700">
-            {headers.map((h, i) => <th key={i} className="text-left font-medium px-5 py-3">{h}</th>)}
+            {headers.map((h, i) => (
+              <th key={i} className="text-left font-medium px-5 py-3">
+                {h}
+              </th>
+            ))}
           </tr>
         </thead>
         <tbody className="bg-white">{children}</tbody>
@@ -305,14 +337,20 @@ function Table({ headers, children }) {
   );
 }
 
-function Th({ children }) { return <th className="text-left px-3 py-2">{children}</th>; }
-function Td({ className = "", children }) { return <td className={`px-5 py-3 align-top ${className}`}>{children}</td>; }
+function Th({ children }) {
+  return <th className="text-left px-3 py-2">{children}</th>;
+}
+function Td({ className = "", children }) {
+  return <td className={`px-5 py-3 align-top ${className}`}>{children}</td>;
+}
 
 function InfoCard({ title, children }) {
   return (
     <div className="rounded border">
       <div className="bg-gray-50 px-3 py-2 text-sm font-medium">{title}</div>
-      <table className="w-full text-sm"><tbody>{children}</tbody></table>
+      <table className="w-full text-sm">
+        <tbody>{children}</tbody>
+      </table>
     </div>
   );
 }
