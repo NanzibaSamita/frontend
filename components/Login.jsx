@@ -1,52 +1,54 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
-import Image from "next/image"
-import axios from "axios"
-import { jwtDecode } from "jwt-decode"
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import Image from "next/image";
+import axios from "axios";
+import { jwtDecode } from "jwt-decode";
 
 export default function LoginPage() {
-  const router = useRouter()
+  const router = useRouter();
 
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
-  const [remember, setRemember] = useState(false)
-  const [error, setError] = useState("") // ✅ for inline error message
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false); // ✅ new state
+  const [error, setError] = useState("");
 
   const handleLogin = async (e) => {
-    e.preventDefault()
-    setError("") // reset error
+    e.preventDefault();
+    setError("");
 
     try {
-      const response = await axios.post("http://localhost:8080/api/auth/login", {
-        email,
-        password,
-      })
+      const response = await axios.post(
+        "http://localhost:8080/api/auth/login",
+        {
+          email,
+          password,
+        }
+      );
 
-      const token = response.data.token
-      localStorage.setItem("token", token)
+      const token = response.data.token;
+      localStorage.setItem("token", token);
 
-      // Decode role
-      const decoded = jwtDecode(token)
-      const role = decoded?.role
+      const decoded = jwtDecode(token);
+      const role = decoded?.role;
 
       if (role === "Admin") {
-        router.push("/dashboard/admin/profile")
+        router.push("/dashboard/admin/profile");
       } else if (role === "Student") {
-        router.push("/dashboard/student/profile")
+        router.push("/dashboard/student/profile");
       } else if (role === "Faculty") {
-        router.push("/dashboard/faculty/profile")
+        router.push("/dashboard/faculty/profile");
       } else if (role === "PGC" || role === "CASR") {
-        router.push("/dashboard/pgc/profile")
+        router.push("/dashboard/pgc/profile");
       } else {
-        router.push("/")
+        router.push("/");
       }
     } catch (error) {
-      const errorMsg = error.response?.data?.message || "Login failed"
-      setError(errorMsg) // ✅ show error inline
+      const errorMsg = error.response?.data?.message || "Login failed";
+      setError(errorMsg);
     }
-  }
+  };
 
   return (
     <div className="min-h-screen flex flex-col bg-[#f8faf9]">
@@ -73,7 +75,7 @@ export default function LoginPage() {
         />
       </div>
 
-      {/* Form centered in remaining space */}
+      {/* Form centered */}
       <div className="flex-1 flex items-center justify-center px-4">
         <form
           onSubmit={handleLogin}
@@ -101,26 +103,28 @@ export default function LoginPage() {
             />
           </div>
 
+          {/* ✅ Password with show/hide toggle */}
           <div className="space-y-1">
             <label className="block text-sm text-gray-700">Password</label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-green-400"
-              required
-            />
+            <div className="relative">
+              <input
+                type={showPassword ? "text" : "password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-green-400 pr-16"
+                required
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-2 top-1/2 transform -translate-y-1/2 text-sm text-green-600 hover:underline"
+              >
+                {showPassword ? "Hide" : "Show"}
+              </button>
+            </div>
           </div>
 
-          <label className="flex items-center text-sm space-x-2 text-gray-600">
-            <input
-              type="checkbox"
-              checked={remember}
-              onChange={() => setRemember(!remember)}
-              className="accent-green-600"
-            />
-            <span>Remember me</span>
-          </label>
+          {/* ✅ Removed "Remember me" */}
 
           <button
             type="submit"
@@ -139,5 +143,5 @@ export default function LoginPage() {
         </form>
       </div>
     </div>
-  )
+  );
 }
