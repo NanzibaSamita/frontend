@@ -58,7 +58,12 @@ export default function ResultsPage() {
             <p className="text-2xl font-bold mt-2">{result.current_semester}</p>
           </div>
 
-          <div className="bg-blue-100 text-blue-800 p-6 rounded-lg shadow-sm text-center">
+          <div className="bg-green-100 text-green-800 p-6 rounded-lg shadow-sm text-center">
+            <p className="text-lg font-medium">Obtained Credits</p>
+            <p className="text-2xl font-bold mt-2">{result.obtained_credits}</p>
+          </div>
+
+          <div className="bg-green-100 text-green-800 p-6 rounded-lg shadow-sm text-center">
             <p className="text-lg font-medium">CGPA</p>
             <p className="text-2xl font-bold mt-2">{result.cgpa}</p>
           </div>

@@ -44,9 +44,8 @@ export default function AdminStudentsPage() {
                 <th className="px-4 py-3 font-semibold">Department</th>
                 <th className="px-4 py-3 font-semibold">Student Number</th>
                 <th className="px-4 py-3 font-semibold">Program</th>
-                <th className="px-4 py-3 font-semibold">Year</th>
+                <th className="px-4 py-3 font-semibold">Academic Year</th>
                 <th className="px-4 py-3 font-semibold">Semester</th>
-                <th className="px-4 py-3 font-semibold">CGPA</th>
                 <th className="px-4 py-3 font-semibold">Status</th>
               </tr>
             </thead>
@@ -75,7 +74,6 @@ export default function AdminStudentsPage() {
                       <td className="px-4 py-3">{d.program_id || "-"}</td>
                       <td className="px-4 py-3">{d.admission_year || "-"}</td>
                       <td className="px-4 py-3">{d.current_semester || "-"}</td>
-                      <td className="px-4 py-3">{d.cgpa ?? "-"}</td>
                       <td className="px-4 py-3">{d.status || "-"}</td>
                     </tr>
                   );

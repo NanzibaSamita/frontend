@@ -71,7 +71,7 @@ export default function AdminFacultyPage() {
       setSavingId(facultyId);
       setToast(null);
 
-      const res = await fetch(`${API_BASE}/api/admin/faculty/${facultyId}/capacity`, {
+      const res = await fetch(`${API_BASE}/api/admin/faculty/${facultyId}/max-supervision-cap`, {
         method: "PATCH", // ← using PATCH per your requirement
         headers: {
           "Content-Type": "application/json",
