@@ -81,7 +81,7 @@ export default function ThesisApproval() {
   /* -------------------- UI -------------------- */
   return (
     <div className="w-full">
-      <h1 className="text-2xl font-semibold mb-6">Thesis Proposal Approvals</h1>
+      <h1 className="text-2xl font-semibold mb-6">Thesis Approvals</h1>
 
       {/* Pending */}
       <Card title="Pending Thesis">
