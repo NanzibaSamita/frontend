@@ -599,7 +599,14 @@ export default function ThesisPage() {
         <div className="bg-white p-6 rounded-lg shadow-md">
           <div className="space-y-4">
             {[
-              { name: "Supervisor Assignment", status: "completed" },
+              {
+                name: "Supervisor Assignment",
+                status: studentInfo?.hasSupervisor
+                  ? "completed"
+                  : eligible
+                  ? "pending"
+                  : "locked",
+              },
               {
                 name: "Thesis Proposal",
                 status: proposalData && proposalData.status === 'Approved' ? "completed" : 
