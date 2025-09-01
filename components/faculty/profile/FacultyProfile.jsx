@@ -1,57 +1,118 @@
 "use client";
+
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 
-export default function FacultyProfilePage() {
-  const [user, setUser] = useState(null);
+export default function FacultyProfile() {
+  const router = useRouter();
 
-  // Fetch faculty profile
+  const [profile, setProfile] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
   useEffect(() => {
-    const fetchProfile = async () => {
+    async function fetchProfile() {
       try {
         const token = localStorage.getItem("token");
-        if (!token) return;
+        if (!token) {
+          setError("Not authenticated. Please login.");
+          setLoading(false);
+          return;
+        }
 
         const res = await fetch("http://localhost:8080/api/faculty/profile", {
           headers: { Authorization: `Bearer ${token}` },
         });
+
+        if (!res.ok) {
+          throw new Error(
+            (await res.json()).message || "Failed to load profile"
+          );
+        }
+
         const data = await res.json();
-        setUser(data);
+        setProfile(data);
       } catch (err) {
-        console.error("Error fetching profile:", err);
+        setError(err.message || "An error occurred");
+      } finally {
+        setLoading(false);
       }
-    };
+    }
     fetchProfile();
   }, []);
 
-  if (!user) {
+  if (loading)
     return (
-      <div className="flex h-screen items-center justify-center text-xl">
-        Loading profile...
+      <div className="flex min-h-screen bg-[#f8faf9] items-center justify-center">
+        <span className="text-lg text-gray-700">Loading profile...</span>
       </div>
     );
-  }
+
+  if (error)
+    return (
+      <div className="flex min-h-screen bg-[#f8faf9] items-center justify-center">
+        <div className="bg-white border border-red-300 rounded-md shadow-md p-8">
+          <div className="text-red-600 font-semibold text-lg mb-2">Error</div>
+          <div>{error}</div>
+        </div>
+      </div>
+    );
+
+  // ✅ Same look & layout as Student Profile
+  const fullName =
+    profile.fullName ||
+    [profile.first_name, profile.last_name].filter(Boolean).join(" ");
 
   return (
-    <div className="flex justify-center p-10 bg-gray-100 min-h-screen">
-      <main className="w-full max-w-2xl">
-        <h1 className="text-4xl font-bold text-gray-800 mb-8 text-center">Faculty Profile</h1>
+    <div className="flex min-h-screen bg-[#f8faf9]">
+      <main className="flex-1 pt-12 flex flex-col items-center">
+        <div className="w-full max-w-4xl">
+          <h1 className="text-4xl font-bold text-black mb-8">Profile</h1>
 
-        <div className="bg-white shadow-md rounded-xl border border-gray-200 p-8 space-y-4">
-          <div className="flex justify-between">
-            <span className="font-semibold text-gray-600">Full Name:</span>
-            <span className="text-gray-900">{user.first_name} {user.last_name}</span>
+          <div className="bg-white border border-gray-300 rounded-md shadow-md p-6">
+            <table className="w-full text-sm md:text-base">
+              <tbody>
+                <tr className="border-b">
+                  <td className="font-medium py-3 text-gray-700">Full Name:</td>
+                  <td className="py-3 text-gray-800 text-right">{fullName}</td>
+                </tr>
+
+                <tr className="border-b">
+                  <td className="font-medium py-3 text-gray-700">
+                    Email Address:
+                  </td>
+                  <td className="py-3 text-gray-800 text-right">
+                    {profile.email}
+                  </td>
+                </tr>
+
+                <tr className="border-b">
+                  <td className="font-medium py-3 text-gray-700">Role:</td>
+                  <td className="py-3 text-gray-800 text-right">
+                    {profile.role || "Faculty"}
+                  </td>
+                </tr>
+
+                <tr>
+                  <td className="font-medium py-3 text-gray-700">
+                    Max Supervision Capacity:
+                  </td>
+                  <td className="py-3 text-gray-800 text-right">
+                    {profile.max_supervision_capacity ?? "-"}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </div>
-          <div className="flex justify-between">
-            <span className="font-semibold text-gray-600">Email:</span>
-            <span className="text-gray-900">{user.email}</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="font-semibold text-gray-600">Role:</span>
-            <span className="text-gray-900">{user.role}</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="font-semibold text-gray-600">Max Supervision Capacity:</span>
-            <span className="text-gray-900">{user.max_supervision_capacity}</span>
+
+          {/* Centered button under card */}
+          <div className="mt-6 flex justify-center">
+            <button
+              onClick={() => router.push("/forgot-password")}
+              className="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-6 rounded-md shadow transition"
+            >
+              Change Password
+            </button>
           </div>
         </div>
       </main>
