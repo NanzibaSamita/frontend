@@ -6,6 +6,7 @@ export default function CoursesPage() {
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
+  
 
   useEffect(() => {
     const fetchCourses = async () => {
