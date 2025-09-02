@@ -50,7 +50,7 @@ export default function ThesisProposalApproval() {
       name: p.student_id?.user_id
         ? `${p.student_id.user_id.first_name} ${p.student_id.user_id.last_name}`
         : "Unknown Student",
-      program: p.student_id?.program_id?.program_name || "Unknown Program",
+      program: p.student_id?.program_id || "Unknown Program",
       title: p.title,
       researchTopic: p.research_topic,
       objective: p.objective,
