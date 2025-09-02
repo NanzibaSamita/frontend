@@ -1,10 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import AdminSidebar from "@/components/admin-sidebar";
 import { useRouter } from "next/navigation";
 import axios from "axios";
-import { jwtDecode } from "jwt-decode";
 
 export default function AddStudentPage() {
   const [studentData, setStudentData] = useState({
@@ -16,7 +14,7 @@ export default function AddStudentPage() {
     department: "",
     admission_year: "",
   });
-  const [credentials, setCredentials] = useState(null); // For displaying generated creds
+  const [credentials, setCredentials] = useState(null);
   const [loading, setLoading] = useState(false);
 
   // Bulk upload states
@@ -25,12 +23,10 @@ export default function AddStudentPage() {
 
   const router = useRouter();
 
-  // Handle input change for single student
   const handleChange = (e) => {
     setStudentData({ ...studentData, [e.target.name]: e.target.value });
   };
 
-  // Handle form submission for single student
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -44,7 +40,6 @@ export default function AddStudentPage() {
         return;
       }
 
-      // Send admission_year as number
       const payload = {
         ...studentData,
         admission_year: Number(studentData.admission_year),
@@ -54,14 +49,11 @@ export default function AddStudentPage() {
         "http://localhost:8080/api/admin/create-student/manual-student-creation",
         payload,
         {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+          headers: { Authorization: `Bearer ${token}` },
         }
       );
 
       setLoading(false);
-      // You can optionally show credentials if backend returns them
       setCredentials(response.data.credentials);
 
       setTimeout(() => {
@@ -74,7 +66,7 @@ export default function AddStudentPage() {
       } else if (error.response?.status === 403) {
         alert("Forbidden. You are not authorized to create students.");
       } else if (error.response?.status === 409) {
-        alert("User already exists.");
+        alert("User or Student already exists.");
       } else if (error.response?.data?.message) {
         alert(error.response.data.message);
       } else {
@@ -83,7 +75,6 @@ export default function AddStudentPage() {
     }
   };
 
-  // Handle CSV Bulk Upload
   const handleBulkUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -131,38 +122,139 @@ export default function AddStudentPage() {
 
   return (
     <div className="flex min-h-screen bg-gray-50">
-      {/* <AdminSidebar /> */}
       <div className="flex-1 p-10">
         <h1 className="text-4xl font-bold text-black mb-8">Add Student</h1>
         <div className="bg-white rounded-lg shadow-md p-8 max-w-4xl mx-auto">
 
           {/* ----- Single Student Form ----- */}
-          <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {[
-              ["First Name", "first_name"],
-              ["Last Name", "last_name"],
-              ["Student ID", "student_number"],
-              ["Email Address", "email"],
-              ["Department", "department"],
-              ["Program", "program_id"],
-              ["Admission Year", "admission_year"],
-            ].map(([label, name]) => (
-              <div key={name} className="flex flex-col">
-                <label className="text-sm font-medium text-gray-700">{label}</label>
-                <input
-                  type={name === "email" ? "email" : "text"}
-                  name={name}
-                  value={studentData[name]}
-                  onChange={handleChange}
-                  className="mt-2 p-3 border border-gray-300 rounded-md"
-                  required
-                />
-              </div>
-            ))}
+          <form
+            onSubmit={handleSubmit}
+            className="grid grid-cols-1 md:grid-cols-2 gap-6"
+          >
+            {/* First Name */}
+            <div className="flex flex-col">
+              <label className="text-sm font-medium text-gray-700">
+                First Name
+              </label>
+              <input
+                type="text"
+                name="first_name"
+                value={studentData.first_name}
+                onChange={handleChange}
+                className="mt-2 p-3 border border-gray-300 rounded-md"
+                required
+              />
+            </div>
+
+            {/* Last Name */}
+            <div className="flex flex-col">
+              <label className="text-sm font-medium text-gray-700">
+                Last Name
+              </label>
+              <input
+                type="text"
+                name="last_name"
+                value={studentData.last_name}
+                onChange={handleChange}
+                className="mt-2 p-3 border border-gray-300 rounded-md"
+                required
+              />
+            </div>
+
+            {/* Student ID */}
+            <div className="flex flex-col">
+              <label className="text-sm font-medium text-gray-700">
+                Student ID
+              </label>
+              <input
+                type="text"
+                name="student_number"
+                value={studentData.student_number}
+                onChange={handleChange}
+                className="mt-2 p-3 border border-gray-300 rounded-md"
+                required
+              />
+            </div>
+
+            {/* Email */}
+            <div className="flex flex-col">
+              <label className="text-sm font-medium text-gray-700">
+                Email Address
+              </label>
+              <input
+                type="email"
+                name="email"
+                value={studentData.email}
+                onChange={handleChange}
+                className="mt-2 p-3 border border-gray-300 rounded-md"
+                required
+              />
+            </div>
+
+            {/* Department */}
+            <div className="flex flex-col">
+              <label className="text-sm font-medium text-gray-700">
+                Department
+              </label>
+              <select
+                name="department"
+                value={studentData.department}
+                onChange={handleChange}
+                className="mt-2 p-3 border border-gray-300 rounded-md"
+                required
+              >
+                <option value="">Select Department</option>
+                <option value="CSE">CSE</option>
+                <option value="EEE">EEE</option>
+                <option value="MPE">MPE</option>
+                <option value="CEE">CEE</option>
+                <option value="BTM">BTM</option>
+              </select>
+            </div>
+
+            {/* Program */}
+            <div className="flex flex-col">
+              <label className="text-sm font-medium text-gray-700">
+                Program
+              </label>
+              <select
+                name="program_id"
+                value={studentData.program_id}
+                onChange={handleChange}
+                className="mt-2 p-3 border border-gray-300 rounded-md"
+                required
+              >
+                <option value="">Select Program</option>
+                <option value="SWE_MSc">MSc in Software Engineering</option>
+                <option value="CSE_MSc">MSc in Computer Science</option>
+                <option value="EEE_MSc">MSc in Electrical Engineering</option>
+                <option value="MPE_MSc">MSc in Mechanical Engineering</option>
+                <option value="BTM_MSc">MSc in Business & Technology Management</option>
+                <option value="CEE_MSc">MSc in Civil & Environmental Engineering</option>
+              </select>
+            </div>
+
+            {/* Admission Year */}
+            <div className="flex flex-col">
+              <label className="text-sm font-medium text-gray-700">
+                Admission Year
+              </label>
+              <input
+                type="number"
+                name="admission_year"
+                value={studentData.admission_year}
+                onChange={handleChange}
+                className="mt-2 p-3 border border-gray-300 rounded-md"
+                required
+              />
+            </div>
+
             <div className="md:col-span-2 mt-4 text-right">
               <button
                 type="submit"
-                className={`bg-green-600 text-white py-3 px-6 rounded-lg hover:bg-green-700 ${loading ? "opacity-50 cursor-not-allowed" : ""}`}
+                className={`bg-green-600 text-white py-3 px-6 rounded-lg hover:bg-green-700 ${
+                  loading ? "opacity-50 cursor-not-allowed" : ""
+                }`}
                 disabled={loading}
               >
                 {loading ? "Submitting..." : "Submit"}
@@ -183,7 +275,9 @@ export default function AddStudentPage() {
 
           {/* ----- Bulk Upload Section ----- */}
           <hr className="my-8" />
-          <h2 className="text-xl font-semibold mb-2">Bulk Upload Students via CSV</h2>
+          <h2 className="text-xl font-semibold mb-2">
+            Bulk Upload Students via CSV
+          </h2>
           <input
             type="file"
             accept=".csv"
@@ -203,7 +297,9 @@ export default function AddStudentPage() {
                   <ul className="list-disc list-inside text-sm text-red-700">
                     {bulkResult.errors.map((err, idx) => (
                       <li key={idx}>
-                        {err.student_number ? `Student ${err.student_number}: ` : ""}
+                        {err.student_number
+                          ? `Student ${err.student_number}: `
+                          : ""}
                         {err.reason}
                       </li>
                     ))}
