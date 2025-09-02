@@ -1,84 +1,206 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
+
+/** ---------- CONFIG (adjust only these if you add a proposals endpoint later) ---------- */
+const API_BASE = "http://localhost:8080/api";
+
+// If you later add a proposals endpoint, set these like:
+// const PRIMARY_PENDING = `${API_BASE}/pgc/thesis-proposals?status=${encodeURIComponent("Submitted,Under Review,RevisionRequested")}`;
+// const PRIMARY_APPROVED = `${API_BASE}/pgc/thesis-proposals?status=${encodeURIComponent("PGCApproved")}`;
+const PRIMARY_PENDING = null; // currently not available in your backend
+const PRIMARY_APPROVED = null; // currently not available in your backend
+
+// Fallbacks that exist today:
+const FALLBACK_PENDING = `${API_BASE}/pgc/supervision-requests`;
+const FALLBACK_APPROVED = `${API_BASE}/pgc/assigned-supervisors`;
+
+/** ------------------------------------------------------------------------------------- */
 
 export default function ThesisApproval() {
-  /* -------------------- Dummy data -------------------- */
-  const pending = useMemo(
-    () => [
-      {
-        id: "220042147",
-        name: "Sadika Tabassum",
-        program: "MSc in CSE",
-        proposedTitle: "Machine Learning Applications in Healthcare Diagnosis",
-        submittedOn: "09/07/2025",
+  const [pending, setPending] = useState([]);
+  const [approved, setApproved] = useState([]);
 
-        // Detail panel
-        researchTopic: "Machine Learning",
-        supervisor: "Aashanan Rahman",
-        objective:
-          "Passionate about applying ML to solve real-world healthcare problems.",
-        attachments: "220042147_ThesisProposal.pdf",
-        contact: "sadikaTabassum@iut-dhaka.edu",
-      },
-      {
-        id: "220042155",
-        name: "Farzana Islam Majumdar",
-        program: "PhD in CSE",
-        proposedTitle: "Federated Learning in Edge Computing",
-        submittedOn: "08/07/2025",
-
-        researchTopic: "Federated Learning",
-        supervisor: "Maliha Noushin Raida",
-        objective:
-          "Exploring privacy-preserving training at the edge for robustness.",
-        attachments: "220042155_ThesisProposal.pdf",
-        contact: "farzana@iut-dhaka.edu",
-      },
-    ],
-    []
-  );
-
-  const approved = useMemo(
-    () => [
-      {
-        id: "220042155",
-        name: "Nanziba Samtia Razin",
-        program: "MSc in CSE",
-        proposedTitle: "AI-Based Predictive Models for Early Disease Detection",
-        submittedOn: "05/07/2025",
-
-        researchTopic: "Medical AI",
-        supervisor: "Abu Raham Mostofa Kamal",
-        objective:
-          "To assist clinicians with earlier detection using explainable AI.",
-        attachments: "220042155_ThesisProposal.pdf",
-        contact: "nanziba.razin@iut-dhaka.edu",
-      },
-      {
-        id: "220042156",
-        name: "Ayesha Mashiát",
-        program: "PhD in CSE",
-        proposedTitle:
-          "Emotion Recognition Using Multimodal Deep Learning Architectures",
-        submittedOn: "04/07/2025",
-
-        researchTopic: "Multimodal Learning",
-        supervisor: "Dr. Md. Azam Hossain",
-        objective:
-          "Understanding emotion signals for assistive interfaces and HCI.",
-        attachments: "220042156_ThesisProposal.pdf",
-        contact: "ayesha.mashiat@iut-dhaka.edu",
-      },
-    ],
-    []
-  );
-
-  /* -------------------- State -------------------- */
   const [openPendingFor, setOpenPendingFor] = useState(null);
   const [openApprovedFor, setOpenApprovedFor] = useState(null);
 
-  /* -------------------- UI -------------------- */
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+
+    const getJSON = async (url) => {
+      if (!url) return null;
+      const res = await fetch(url, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      // If route isn't there (404), just return null instead of throwing
+      if (!res.ok) {
+        if (res.status === 404) return null;
+        let msg = `Request failed: ${res.status}`;
+        try {
+          const payload = await res.json();
+          if (payload?.message) msg = payload.message;
+        } catch {}
+        throw new Error(msg);
+      }
+      return res.json();
+    };
+
+    // Map payload → the exact table row shape your UI expects
+    const mapProposalToRow = (p) => {
+      // student bits (try to normalize across shapes)
+      const stu = p.student_id || {};
+      const stuUser = stu.user_id || {};
+      const name =
+        [stuUser.first_name, stuUser.last_name].filter(Boolean).join(" ") ||
+        p.studentName ||
+        "-";
+      const id = stu.student_number || p.student_number || p.id || "-";
+      const program =
+        stu.program_id?.program_name && stu.program_id?.degree_type
+          ? `${stu.program_id.program_name} (${stu.program_id.degree_type})`
+          : stu.program_id || p.program || "—";
+
+      // supervisor
+      const sup = p.supervisor_id || {};
+      const supUser = sup.user_id || {};
+      const supervisor =
+        [supUser.first_name, supUser.last_name].filter(Boolean).join(" ") ||
+        p.supervisor ||
+        "-";
+
+      // thesis fields
+      const proposedTitle = p.title || p.proposedTitle || "-";
+      const researchTopic = p.research_topic || p.researchTopic || "-";
+      const objective = p.objective || "-";
+      const attachments = p.attachment || p.attachments || "-";
+
+      const submittedOn = formatDate(
+        p.createdAt || p.created_at || p.submittedOn
+      );
+      const contact = stuUser.email || p.contact || "-";
+
+      return {
+        id: String(id),
+        name,
+        program,
+        proposedTitle,
+        submittedOn,
+        researchTopic,
+        supervisor,
+        objective,
+        attachments,
+        contact,
+        _raw: p,
+      };
+    };
+
+    // Fallback mappers for the supervision endpoints (no thesis fields available)
+    const mapSupervisionRequestToRow = (a) => {
+      const stu = a.student_id || {};
+      const u = stu.user_id || {};
+      const name = [u.first_name, u.last_name].filter(Boolean).join(" ") || "-";
+      const id = stu.student_number || "-";
+      const program =
+        stu.program_id?.program_name && stu.program_id?.degree_type
+          ? `${stu.program_id.program_name} (${stu.program_id.degree_type})`
+          : stu.program_id || "—";
+
+      return {
+        id: String(id),
+        name,
+        program,
+        proposedTitle: "-", // not available from this endpoint
+        submittedOn: "-", // not available
+        researchTopic: "-", // not available
+        supervisor: "-", // not available for pending requests list
+        objective: "-",
+        attachments: "-",
+        contact: u.email || "-",
+        _raw: a,
+      };
+    };
+
+    const mapAssignedSupervisorToRow = (a) => {
+      const stu = a.student_id || {};
+      const u = stu.user_id || {};
+      const name = [u.first_name, u.last_name].filter(Boolean).join(" ") || "-";
+      const id = stu.student_number || "-";
+      const program =
+        stu.program_id?.program_name && stu.program_id?.degree_type
+          ? `${stu.program_id.program_name} (${stu.program_id.degree_type})`
+          : stu.program_id || "—";
+
+      const fac = a.accepted_faculty || {};
+      const facUser = fac.user_id || {};
+      const supervisor =
+        [facUser.first_name, facUser.last_name].filter(Boolean).join(" ") ||
+        "-";
+
+      return {
+        id: String(id),
+        name,
+        program,
+        proposedTitle: "-", // no thesis title here
+        submittedOn: "-", // not available
+        researchTopic: "-",
+        supervisor,
+        objective: "-",
+        attachments: "-",
+        contact: u.email || "-",
+        _raw: a,
+      };
+    };
+
+    const load = async () => {
+      try {
+        // ---------- Pending ----------
+        let pendingPayload =
+          (await getJSON(PRIMARY_PENDING)) ?? (await getJSON(FALLBACK_PENDING)); // /pgc/supervision-requests
+
+        // Normalize to an array
+        let pendingArray = [];
+        if (Array.isArray(pendingPayload?.proposals))
+          pendingArray = pendingPayload.proposals;
+        else if (Array.isArray(pendingPayload?.assignments))
+          pendingArray = pendingPayload.assignments;
+        else if (Array.isArray(pendingPayload)) pendingArray = pendingPayload;
+
+        // Choose mapper based on which payload we got
+        const pendingRows = pendingPayload?.proposals
+          ? pendingArray.map(mapProposalToRow)
+          : pendingArray.map(mapSupervisionRequestToRow);
+
+        setPending(pendingRows);
+
+        // ---------- Approved ----------
+        let approvedPayload =
+          (await getJSON(PRIMARY_APPROVED)) ??
+          (await getJSON(FALLBACK_APPROVED)); // /pgc/assigned-supervisors
+
+        let approvedArray = [];
+        if (Array.isArray(approvedPayload?.proposals))
+          approvedArray = approvedPayload.proposals;
+        else if (Array.isArray(approvedPayload?.assignments))
+          approvedArray = approvedPayload.assignments;
+        else if (Array.isArray(approvedPayload))
+          approvedArray = approvedPayload;
+
+        const approvedRows = approvedPayload?.proposals
+          ? approvedArray.map(mapProposalToRow)
+          : approvedArray.map(mapAssignedSupervisorToRow);
+
+        setApproved(approvedRows);
+      } catch (e) {
+        console.error("Failed to load data:", e);
+        setPending([]);
+        setApproved([]);
+      }
+    };
+
+    load();
+  }, []);
+
+  /* -------------------- UI (unchanged) -------------------- */
   return (
     <div className="w-full">
       <h1 className="text-2xl font-semibold mb-6">Thesis Approvals</h1>
@@ -191,7 +313,7 @@ export default function ThesisApproval() {
               Objective: openApprovedFor.objective,
               Contact: openApprovedFor.contact,
             }}
-            showActions={false} // <- no buttons in the approved list
+            showActions={false}
           />
         )}
       </Card>
@@ -199,8 +321,7 @@ export default function ThesisApproval() {
   );
 }
 
-/* -------------------- Reusable bits -------------------- */
-
+/* ---------- presentational bits (unchanged) ---------- */
 function Card({ title, className = "", children }) {
   return (
     <div className={`bg-white rounded shadow-sm border ${className}`}>
@@ -245,22 +366,18 @@ function DetailDropDown({
   return (
     <div className="mt-6 rounded border bg-white">
       <div className="px-4 py-3 border-b text-sm font-medium">{title}</div>
-
-      {/* two-column info */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4">
         <InfoCard title="Thesis Details">
           {Object.entries(leftInfo).map(([k, v]) => (
             <InfoRow key={k} label={k} value={v} />
           ))}
         </InfoCard>
-
         <InfoCard title="Supervisor / Meta">
           {Object.entries(rightInfo).map(([k, v]) => (
             <InfoRow key={k} label={k} value={v} />
           ))}
         </InfoCard>
       </div>
-
       {showActions && (
         <div className="flex gap-3 px-4 pb-4">
           <button
@@ -297,6 +414,7 @@ function InfoCard({ title, children }) {
     </div>
   );
 }
+
 function InfoRow({ label, value }) {
   return (
     <tr className="border-t">
@@ -317,4 +435,12 @@ function InfoRow({ label, value }) {
       </td>
     </tr>
   );
+}
+
+/* helpers */
+function formatDate(d) {
+  if (!d) return "-";
+  const dt = new Date(d);
+  if (Number.isNaN(dt.getTime())) return String(d);
+  return dt.toLocaleDateString();
 }
