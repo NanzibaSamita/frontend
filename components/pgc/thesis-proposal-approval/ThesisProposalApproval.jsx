@@ -1,411 +1,299 @@
+// components/pgc/thesis-proposal-approval/ThesisProposalApproval.jsx
 "use client";
 
-import { useMemo, useState, useEffect } from "react";
+import { useState, useEffect } from "react";
+
+const API = process.env.NEXT_PUBLIC_API || "http://localhost:8080";
 
 export default function ThesisProposalApproval() {
-  /* -------------------- State -------------------- */
-  const [pendingProposals, setPendingProposals] = useState([]);
-  const [approvedProposals, setApprovedProposals] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [pending, setPending] = useState([]);
+  const [approved, setApproved] = useState([]);
   const [openPendingFor, setOpenPendingFor] = useState(null);
   const [openApprovedFor, setOpenApprovedFor] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
+  const [error, setError] = useState(null);
 
-  /* -------------------- API Functions -------------------- */
-  const getAuthHeaders = () => {
-    // Assuming user_id is stored somewhere for Bearer token
-    const userId = window.localStorage?.getItem('user_id') || 'default_user_id';
+  const authHeaders = () => {
+    const token = localStorage.getItem("token"); // <-- real JWT
     return {
-      'Authorization': `Bearer ${userId}`,
-      'Content-Type': 'application/json'
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
     };
   };
 
-  const fetchProposals = async () => {
+  // Map backend doc -> UI shape
+  const buildAttachmentUrl = (raw) => {
+    if (!raw) return null;
+    if (/^https?:\/\//i.test(raw)) return raw; // already absolute
+
+    let p = String(raw).replace(/\\/g, "/"); // windows -> posix
+    if (!p.startsWith("/")) p = "/" + p; // ensure leading slash
+    if (!/^\/uploads\//.test(p)) p = "/uploads" + p; // mount point from server.js
+
+    return `${API}${p}`;
+  };
+
+  const fileLabel = (raw) => {
+    if (!raw) return "Proposal File";
+    const p = String(raw).replace(/\\/g, "/");
+    return p.split("/").pop() || "Proposal File";
+  };
+
+  /* --- mapper --- */
+  const toView = (p) => {
+    const url = buildAttachmentUrl(p.attachment);
+
+    return {
+      proposalId: p._id,
+      id: p.student_id?.student_number || p._id,
+      name: p.student_id?.user_id
+        ? `${p.student_id.user_id.first_name} ${p.student_id.user_id.last_name}`
+        : "Unknown Student",
+      program: p.student_id?.program_id?.program_name || "Unknown Program",
+      title: p.title,
+      researchTopic: p.research_topic,
+      objective: p.objective,
+      background: p.background,
+      methodology: p.methodology,
+      timeline: p.timeline,
+      estimatedCost: p.estimated_cost,
+      references: p.references,
+      submittedOn: new Date(p.createdAt).toLocaleDateString("en-GB"),
+      contact: p.student_id?.user_id?.email || "N/A",
+      supervisor: p.supervisor_id?.user_id
+        ? `${p.supervisor_id.user_id.first_name} ${p.supervisor_id.user_id.last_name}`
+        : "Unknown Supervisor",
+      feedback: p.feedback,
+      feedbackHistory: p.feedbackHistory || [],
+      attachments: url ? [{ label: fileLabel(p.attachment), url }] : [],
+    };
+  };
+
+  const fetchLists = async () => {
     try {
       setLoading(true);
       setError(null);
 
-      // Fetch pending proposals (waiting for PGC review)
-      const pendingResponse = await fetch('/api/pgc/pending-proposals', {
-        headers: getAuthHeaders()
-      });
-      
-      if (!pendingResponse.ok) {
-        throw new Error(`Failed to fetch pending proposals: ${pendingResponse.statusText}`);
+      // ✅ PGC still needs to review supervisor-approved items
+      const pendingRes = await fetch(
+        `${API}/api/pgc/thesis-proposals?status=Approved`,
+        { headers: authHeaders() }
+      );
+      if (!pendingRes.ok) {
+        throw new Error(
+          `Failed to fetch pending proposals: ${pendingRes.status} ${pendingRes.statusText}`
+        );
       }
-      
-      const pendingData = await pendingResponse.json();
+      const pendingJson = await pendingRes.json();
 
-      // Fetch approved proposals 
-      const approvedResponse = await fetch('/api/pgc/approved-proposals', {
-        headers: getAuthHeaders()
-      });
-      
-      if (!approvedResponse.ok) {
-        throw new Error(`Failed to fetch approved proposals: ${approvedResponse.statusText}`);
+      // ✅ Already PGC approved
+      const approvedRes = await fetch(
+        `${API}/api/pgc/thesis-proposals?status=PGCApproved`,
+        { headers: authHeaders() }
+      );
+      if (!approvedRes.ok) {
+        throw new Error(
+          `Failed to fetch approved proposals: ${approvedRes.status} ${approvedRes.statusText}`
+        );
       }
-      
-      const approvedData = await approvedResponse.json();
+      const approvedJson = await approvedRes.json();
 
-      // Transform data to match frontend structure
-      const transformedPending = (pendingData.proposals || []).map(transformProposal);
-      const transformedApproved = (approvedData.proposals || []).map(transformProposal);
-
-      setPendingProposals(transformedPending);
-      setApprovedProposals(transformedApproved);
-    } catch (err) {
-      console.error('Error fetching proposals:', err);
-      setError(err.message);
+      setPending((pendingJson.proposals || []).map(toView));
+      setApproved((approvedJson.proposals || []).map(toView));
+      setOpenPendingFor(null);
+      setOpenApprovedFor(null);
+    } catch (e) {
+      console.error(e);
+      setError(e.message);
     } finally {
       setLoading(false);
     }
   };
 
-  const transformProposal = (proposal) => {
-    return {
-      id: proposal.student_id?.student_number || proposal._id,
-      name: proposal.student_id?.user_id ? 
-        `${proposal.student_id.user_id.first_name} ${proposal.student_id.user_id.last_name}` : 
-        'Unknown Student',
-      program: proposal.student_id?.program_id?.program_name || 'Unknown Program',
-      title: proposal.title,
-      submittedOn: new Date(proposal.createdAt).toLocaleDateString('en-GB'),
-      requestedOn: new Date(proposal.createdAt).toLocaleDateString('dd-MM-yyyy'),
-      researchTopic: proposal.research_topic,
-      supervisor: proposal.supervisor_id?.user_id ? 
-        `${proposal.supervisor_id.user_id.first_name} ${proposal.supervisor_id.user_id.last_name}` : 
-        'Unknown Supervisor',
-      objective: proposal.objective,
-      background: proposal.background,
-      methodology: proposal.methodology,
-      timeline: proposal.timeline,
-      estimatedCost: proposal.estimated_cost,
-      references: proposal.references,
-      attachments: proposal.attachment ? 
-        [{ label: proposal.attachment, url: `#${proposal.attachment}` }] : [],
-      contact: proposal.student_id?.user_id?.email || 'No email',
-      proposalId: proposal._id,
-      feedback: proposal.feedback,
-      feedbackHistory: proposal.feedbackHistory || []
-    };
-  };
-
-  const handleProposalAction = async (proposalId, action, feedback = '') => {
+  const review = async (proposalId, status, feedback = "") => {
     try {
       setActionLoading(true);
       setError(null);
 
-      const response = await fetch('/api/pgc/review-proposal', {
-        method: 'POST',
-        headers: getAuthHeaders(),
-        body: JSON.stringify({
-          proposalId,
-          feedback,
-          status: action // 'Approved', 'Rejected', or 'Comment'
-        })
+      const res = await fetch(`${API}/api/pgc/thesis-proposals/review`, {
+        method: "POST",
+        headers: authHeaders(),
+        body: JSON.stringify({ proposalId, status, feedback }),
       });
-
-      if (!response.ok) {
-        throw new Error(`Failed to ${action.toLowerCase()} proposal: ${response.statusText}`);
+      if (!res.ok) {
+        throw new Error(
+          `Failed to ${status.toLowerCase()} proposal: ${res.status} ${
+            res.statusText
+          }`
+        );
       }
 
-      const result = await response.json();
-      
-      // Refresh the proposals list
-      await fetchProposals();
-      
-      // Close any open details
-      setOpenPendingFor(null);
-      setOpenApprovedFor(null);
-
-      alert(`Proposal ${action.toLowerCase()} successfully!`);
-    } catch (err) {
-      console.error(`Error ${action.toLowerCase()} proposal:`, err);
-      setError(err.message);
-      alert(`Error: ${err.message}`);
+      await fetchLists(); // refresh both tables
+      alert(`Proposal ${status.toLowerCase()} successfully`);
+    } catch (e) {
+      console.error(e);
+      setError(e.message);
+      alert(`Error: ${e.message}`);
     } finally {
       setActionLoading(false);
     }
   };
 
-  /* -------------------- Effects -------------------- */
   useEffect(() => {
-    fetchProposals();
+    fetchLists();
   }, []);
 
-  /* -------------------- Render -------------------- */
-  if (loading) {
-    return (
-      <div className="w-full flex justify-center items-center py-8">
-        <div className="text-lg">Loading proposals...</div>
-      </div>
-    );
-  }
+  if (loading) return <div className="p-6">Loading proposals…</div>;
 
-  if (error) {
+  if (error)
     return (
-      <div className="w-full">
-        <div className="bg-red-50 border border-red-200 rounded p-4 mb-4">
-          <p className="text-red-800">Error: {error}</p>
-          <button 
-            onClick={fetchProposals}
-            className="mt-2 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
-          >
-            Retry
-          </button>
+      <div className="p-6">
+        <div className="bg-red-50 border border-red-200 text-red-800 p-4 rounded">
+          Error: {error}
+          <div className="mt-2">
+            <button
+              onClick={fetchLists}
+              className="px-3 py-1 bg-red-600 text-white rounded"
+            >
+              Retry
+            </button>
+          </div>
         </div>
       </div>
     );
-  }
 
   return (
-    <div className="w-full">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-semibold">Thesis Proposal Approvals</h1>
+    <div className="p-6">
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-semibold">
+          Thesis Proposal Approvals (PGC)
+        </h1>
         <button
-          onClick={fetchProposals}
+          onClick={fetchLists}
           className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm"
         >
           Refresh
         </button>
       </div>
 
-      {/* Pending */}
-      <Card title={`Pending Thesis Proposals (${pendingProposals.length})`} className="mb-8">
-        {pendingProposals.length === 0 ? (
-          <div className="p-4 text-gray-500 text-center">
-            No pending proposals for review.
-          </div>
-        ) : (
-          <Table
-            headers={[
-              "Student",
-              "ID", 
-              "Program",
-              "Proposed Title",
-              "Submitted on",
-              "",
-            ]}
-          >
-            {pendingProposals.map((p) => (
-              <tr key={p.proposalId} className="border-t">
-                <Td className="whitespace-pre-wrap">{p.name}</Td>
-                <Td>{p.id}</Td>
-                <Td className="whitespace-pre-wrap">{p.program}</Td>
-                <Td className="whitespace-pre-wrap">{p.title}</Td>
-                <Td>{p.submittedOn}</Td>
-                <Td className="text-right">
-                  <button
-                    onClick={() =>
-                      setOpenPendingFor((cur) => (cur?.proposalId === p.proposalId ? null : p))
-                    }
-                    className="px-3 py-1 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded"
-                    disabled={actionLoading}
-                  >
-                    {openPendingFor?.proposalId === p.proposalId ? "Hide" : "View"}
-                  </button>
-                </Td>
-              </tr>
-            ))}
-          </Table>
-        )}
-
-        {openPendingFor && (
-          <DetailsBlock
-            summary={{
-              student: openPendingFor.name,
-              id: openPendingFor.id,
-              program: openPendingFor.program,
-              title: openPendingFor.title,
-              date: openPendingFor.submittedOn,
-            }}
-            leftTitle="Thesis Proposal Details"
-            showActions={true}
-            dataLeft={[
-              { label: "Name", value: openPendingFor.name },
-              { label: "ID", value: openPendingFor.id },
-              { label: "Research Topic", value: openPendingFor.researchTopic },
-              { label: "Proposed Title", value: openPendingFor.title },
-              { label: "Background", value: openPendingFor.background },
-              { label: "Methodology", value: openPendingFor.methodology },
-              { label: "Timeline", value: openPendingFor.timeline || "-" },
-              { label: "Estimated Cost", value: openPendingFor.estimatedCost || "-" },
-              { label: "References", value: openPendingFor.references || "-" },
-              {
-                label: "Attachments",
-                value:
-                  openPendingFor.attachments?.length > 0 ? (
-                    openPendingFor.attachments.map((a) => (
-                      <a
-                        key={a.label}
-                        href={a.url}
-                        className="text-blue-600 hover:underline block"
-                      >
-                        {a.label}
-                      </a>
-                    ))
-                  ) : "-",
-              },
-            ]}
-            dataRight={[
-              { label: "Supervisor", value: openPendingFor.supervisor },
-              { label: "Objective", value: openPendingFor.objective },
-              { label: "Contact", value: openPendingFor.contact },
-              { label: "Submitted", value: openPendingFor.requestedOn },
-              { label: "Current Status", value: "Waiting for PGC Review" },
-              { 
-                label: "Previous Feedback", 
-                value: openPendingFor.feedbackHistory?.length > 0 ? 
-                  openPendingFor.feedbackHistory.map((f, i) => (
-                    <div key={i} className="text-xs bg-gray-50 p-2 mb-1 rounded">
-                      <div className="font-medium">{f.status} - {new Date(f.date).toLocaleDateString()}</div>
-                      <div>{f.feedback}</div>
-                    </div>
-                  )) : "No previous feedback"
-              },
-            ]}
-            onComment={(feedback) => handleProposalAction(openPendingFor.proposalId, 'Comment', feedback)}
-            onApprove={(feedback) => handleProposalAction(openPendingFor.proposalId, 'Approved', feedback)}
-            onReject={(feedback) => handleProposalAction(openPendingFor.proposalId, 'Rejected', feedback)}
-            actionLoading={actionLoading}
-          />
-        )}
+      <Card
+        title={`Pending Thesis Proposals (${pending.length})`}
+        className="mb-8"
+      >
+        <ListTable
+          items={pending}
+          empty="No pending proposals for review."
+          openFor={openPendingFor}
+          setOpenFor={setOpenPendingFor}
+          onReview={review}
+          actionLoading={actionLoading}
+          showActions
+        />
       </Card>
 
-      {/* Approved */}
-      <Card title={`Approved Thesis Proposals (${approvedProposals.length})`}>
-        {approvedProposals.length === 0 ? (
-          <div className="p-4 text-gray-500 text-center">
-            No approved proposals yet.
-          </div>
-        ) : (
-          <Table
-            headers={[
-              "Student",
-              "ID",
-              "Program", 
-              "Proposed Title",
-              "Approved on",
-              "",
-            ]}
-          >
-            {approvedProposals.map((a) => (
-              <tr key={a.proposalId} className="border-t">
-                <Td className="whitespace-pre-wrap">{a.name}</Td>
-                <Td>{a.id}</Td>
-                <Td className="whitespace-pre-wrap">{a.program}</Td>
-                <Td className="whitespace-pre-wrap">{a.title}</Td>
-                <Td>{a.submittedOn}</Td>
-                <Td className="text-right">
-                  <button
-                    onClick={() =>
-                      setOpenApprovedFor((cur) => (cur?.proposalId === a.proposalId ? null : a))
-                    }
-                    className="px-3 py-1 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded"
-                  >
-                    {openApprovedFor?.proposalId === a.proposalId ? "Hide" : "View"}
-                  </button>
-                </Td>
-              </tr>
-            ))}
-          </Table>
-        )}
-
-        {openApprovedFor && (
-          <DetailsBlock
-            summary={{
-              student: openApprovedFor.name,
-              id: openApprovedFor.id,
-              program: openApprovedFor.program,
-              title: openApprovedFor.title,
-              date: openApprovedFor.submittedOn,
-            }}
-            leftTitle="Thesis Proposal Details"
-            showActions={false} // no actions for approved
-            dataLeft={[
-              { label: "Name", value: openApprovedFor.name },
-              { label: "ID", value: openApprovedFor.id },
-              { label: "Research Topic", value: openApprovedFor.researchTopic },
-              { label: "Proposed Title", value: openApprovedFor.title },
-              { label: "Background", value: openApprovedFor.background },
-              { label: "Methodology", value: openApprovedFor.methodology },
-              { label: "Timeline", value: openApprovedFor.timeline || "-" },
-              { label: "Estimated Cost", value: openApprovedFor.estimatedCost || "-" },
-              { label: "References", value: openApprovedFor.references || "-" },
-              {
-                label: "Attachments",
-                value:
-                  openApprovedFor.attachments?.length > 0 ? (
-                    openApprovedFor.attachments.map((a) => (
-                      <a
-                        key={a.label}
-                        href={a.url}
-                        className="text-blue-600 hover:underline block"
-                      >
-                        {a.label}
-                      </a>
-                    ))
-                  ) : "-",
-              },
-            ]}
-            dataRight={[
-              { label: "Supervisor", value: openApprovedFor.supervisor },
-              { label: "Objective", value: openApprovedFor.objective },
-              { label: "Contact", value: openApprovedFor.contact },
-              { label: "Approved", value: openApprovedFor.requestedOn },
-              { label: "Status", value: "PGC Approved" },
-              { 
-                label: "Final Feedback", 
-                value: openApprovedFor.feedback || "No feedback provided"
-              },
-            ]}
-          />
-        )}
+      <Card title={`PGC Approved Thesis Proposals (${approved.length})`}>
+        <ListTable
+          items={approved}
+          empty="No PGC-approved proposals yet."
+          openFor={openApprovedFor}
+          setOpenFor={setOpenApprovedFor}
+          onReview={review}
+          actionLoading={actionLoading}
+          showActions={false}
+        />
       </Card>
     </div>
   );
 }
 
-/* ==================== Details Block ==================== */
-function DetailsBlock({
-  summary,
-  leftTitle,
-  dataLeft,
-  dataRight,
-  showActions = true,
-  onComment,
+/* ---------- Reusable bits ---------- */
+
+function ListTable({
+  items,
+  empty,
+  openFor,
+  setOpenFor,
+  onReview,
+  actionLoading,
+  showActions,
+}) {
+  if (items.length === 0) {
+    return <div className="p-4 text-gray-500 text-center">{empty}</div>;
+  }
+
+  return (
+    <>
+      <Table
+        headers={[
+          "Student",
+          "ID",
+          "Program",
+          "Proposed Title",
+          "Submitted on",
+          "",
+        ]}
+      >
+        {items.map((p) => (
+          <tr key={p.proposalId} className="border-t">
+            <Td className="whitespace-pre-wrap">{p.name}</Td>
+            <Td>{p.id}</Td>
+            <Td className="whitespace-pre-wrap">{p.program}</Td>
+            <Td className="whitespace-pre-wrap">{p.title}</Td>
+            <Td>{p.submittedOn}</Td>
+            <Td className="text-right">
+              <button
+                onClick={() =>
+                  setOpenFor((cur) =>
+                    cur?.proposalId === p.proposalId ? null : p
+                  )
+                }
+                className="px-3 py-1 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded"
+                disabled={actionLoading}
+              >
+                {openFor?.proposalId === p.proposalId ? "Hide" : "View"}
+              </button>
+            </Td>
+          </tr>
+        ))}
+      </Table>
+
+      {openFor && (
+        <Details
+          data={openFor}
+          showActions={showActions}
+          actionLoading={actionLoading}
+          onApprove={(fb) => onReview(openFor.proposalId, "Approved", fb)}
+          onReject={(fb) => onReview(openFor.proposalId, "Rejected", fb)}
+          onComment={(fb) => onReview(openFor.proposalId, "Comment", fb)}
+        />
+      )}
+    </>
+  );
+}
+
+function Details({
+  data,
+  showActions,
+  actionLoading,
   onApprove,
   onReject,
-  actionLoading = false
+  onComment,
 }) {
-  const [feedbackText, setFeedbackText] = useState('');
-  const [showFeedbackInput, setShowFeedbackInput] = useState(false);
-  const [currentAction, setCurrentAction] = useState(null);
+  const [feedback, setFeedback] = useState("");
+  const [mode, setMode] = useState(null);
 
-  const handleActionClick = (action) => {
-    setCurrentAction(action);
-    setShowFeedbackInput(true);
-  };
-
-  const submitAction = () => {
-    if (currentAction === 'Comment') {
-      onComment(feedbackText);
-    } else if (currentAction === 'Approved') {
-      onApprove(feedbackText);
-    } else if (currentAction === 'Rejected') {
-      onReject(feedbackText);
-    }
-    
-    setFeedbackText('');
-    setShowFeedbackInput(false);
-    setCurrentAction(null);
+  const submit = () => {
+    if (mode === "Rejected" && !feedback.trim()) return;
+    if (mode === "Approved") onApprove(feedback);
+    else if (mode === "Rejected") onReject(feedback);
+    else if (mode === "Comment") onComment(feedback);
+    setFeedback("");
+    setMode(null);
   };
 
   return (
     <div className="mt-6 border rounded bg-white">
-      {/* Summary bar */}
       <div className="rounded border m-4 overflow-hidden">
         <table className="w-full text-xs">
           <thead className="bg-gray-50">
@@ -419,63 +307,106 @@ function DetailsBlock({
           </thead>
           <tbody>
             <tr className="border-t">
-              <Td>{summary.student}</Td>
-              <Td>{summary.id}</Td>
-              <Td>{summary.program}</Td>
-              <Td>{summary.title}</Td>
-              <Td>{summary.date}</Td>
+              <Td>{data.name}</Td>
+              <Td>{data.id}</Td>
+              <Td>{data.program}</Td>
+              <Td>{data.title}</Td>
+              <Td>{data.submittedOn}</Td>
             </tr>
           </tbody>
         </table>
       </div>
 
-      {/* Two columns */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4">
-        <InfoCard title={leftTitle}>
-          {dataLeft.map((row) => (
-            <InfoRow key={row.label} label={row.label} value={row.value} />
-          ))}
+        <InfoCard title="Thesis Proposal Details">
+          <InfoRow label="Research Topic" value={data.researchTopic} />
+          <InfoRow label="Background" value={data.background} />
+          <InfoRow label="Methodology" value={data.methodology} />
+          <InfoRow label="Timeline" value={data.timeline || "-"} />
+          <InfoRow label="Estimated Cost" value={data.estimatedCost || "-"} />
+          <InfoRow label="References" value={data.references || "-"} />
+          <InfoRow
+            label="Attachments"
+            value={
+              data.attachments.length
+                ? data.attachments.map((a) => (
+                    <a
+                      key={a.url}
+                      href={a.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:underline block"
+                    >
+                      {a.label}
+                    </a>
+                  ))
+                : "-"
+            }
+          />
         </InfoCard>
 
-        <InfoCard title="Supervisor & Additional Info">
-          {dataRight.map((row) => (
-            <InfoRow key={row.label} label={row.label} value={row.value} />
-          ))}
+        <InfoCard title="Supervisor & Contact">
+          <InfoRow label="Supervisor" value={data.supervisor} />
+          <InfoRow label="Objective" value={data.objective} />
+          <InfoRow label="Contact" value={data.contact} />
+          <InfoRow
+            label="Previous Feedback"
+            value={
+              data.feedbackHistory.length ? (
+                <div className="space-y-1">
+                  {data.feedbackHistory.map((f, i) => (
+                    <div key={i} className="text-xs bg-gray-50 p-2 rounded">
+                      <div className="font-medium">
+                        {f.status} • {new Date(f.date).toLocaleDateString()}
+                      </div>
+                      <div>{f.feedback}</div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                "No previous feedback"
+              )
+            }
+          />
         </InfoCard>
       </div>
 
-      {/* Feedback Input */}
-      {showFeedbackInput && (
+      {mode && (
         <div className="mx-4 mb-4 p-4 bg-gray-50 rounded border">
           <div className="mb-2 font-medium">
-            {currentAction === 'Comment' ? 'Add Comment' : 
-             currentAction === 'Approved' ? 'Approval Feedback (Optional)' :
-             'Rejection Feedback (Required)'}
+            {mode === "Comment"
+              ? "Add Comment"
+              : mode === "Approved"
+              ? "Approval Feedback (Optional)"
+              : "Rejection Feedback (Required)"}
           </div>
           <textarea
-            value={feedbackText}
-            onChange={(e) => setFeedbackText(e.target.value)}
-            placeholder={
-              currentAction === 'Comment' ? 'Enter your comment...' :
-              currentAction === 'Approved' ? 'Optional approval notes...' :
-              'Please provide reason for rejection...'
-            }
             className="w-full p-2 border rounded h-24 resize-none"
+            value={feedback}
+            onChange={(e) => setFeedback(e.target.value)}
+            placeholder={
+              mode === "Comment"
+                ? "Enter your comment..."
+                : mode === "Approved"
+                ? "Optional approval notes..."
+                : "Please provide reason for rejection..."
+            }
             disabled={actionLoading}
           />
           <div className="flex gap-2 mt-2">
             <button
-              onClick={submitAction}
-              disabled={actionLoading || (currentAction === 'Rejected' && !feedbackText.trim())}
+              onClick={submit}
+              disabled={
+                actionLoading || (mode === "Rejected" && !feedback.trim())
+              }
               className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm disabled:opacity-50"
             >
-              {actionLoading ? 'Processing...' : `Submit ${currentAction}`}
+              {actionLoading ? "Processing..." : `Submit ${mode}`}
             </button>
             <button
               onClick={() => {
-                setShowFeedbackInput(false);
-                setCurrentAction(null);
-                setFeedbackText('');
+                setMode(null);
+                setFeedback("");
               }}
               disabled={actionLoading}
               className="px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-700 rounded text-sm"
@@ -486,25 +417,24 @@ function DetailsBlock({
         </div>
       )}
 
-      {/* Action buttons */}
-      {showActions && !showFeedbackInput && (
+      {showActions && !mode && (
         <div className="flex gap-3 px-4 pb-4">
           <button
-            onClick={() => handleActionClick('Comment')}
+            onClick={() => setMode("Comment")}
             disabled={actionLoading}
             className="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded disabled:opacity-50"
           >
             Comment
           </button>
           <button
-            onClick={() => handleActionClick('Approved')}
+            onClick={() => setMode("Approved")}
             disabled={actionLoading}
             className="px-4 py-2 text-sm bg-green-600 hover:bg-green-700 text-white rounded disabled:opacity-50"
           >
             Approve
           </button>
           <button
-            onClick={() => handleActionClick('Rejected')}
+            onClick={() => setMode("Rejected")}
             disabled={actionLoading}
             className="px-4 py-2 text-sm bg-red-600 hover:bg-red-700 text-white rounded disabled:opacity-50"
           >
@@ -516,7 +446,6 @@ function DetailsBlock({
   );
 }
 
-/* ==================== Small UI helpers ==================== */
 function Card({ title, className = "", children }) {
   return (
     <div className={`bg-white rounded shadow-sm border ${className}`}>
@@ -525,7 +454,6 @@ function Card({ title, className = "", children }) {
     </div>
   );
 }
-
 function Table({ headers, children }) {
   return (
     <div className="overflow-x-auto">
@@ -544,15 +472,12 @@ function Table({ headers, children }) {
     </div>
   );
 }
-
 function Th({ children }) {
   return <th className="text-left px-3 py-2">{children}</th>;
 }
-
 function Td({ className = "", children }) {
   return <td className={`px-5 py-3 align-top ${className}`}>{children}</td>;
 }
-
 function InfoCard({ title, children }) {
   return (
     <div className="rounded border">
@@ -563,11 +488,12 @@ function InfoCard({ title, children }) {
     </div>
   );
 }
-
 function InfoRow({ label, value }) {
   return (
     <tr className="border-t">
-      <td className="w-44 sm:w-56 text-gray-600 px-3 py-2 align-top">{label}</td>
+      <td className="w-44 sm:w-56 text-gray-600 px-3 py-2 align-top">
+        {label}
+      </td>
       <td className="px-3 py-2">{value || "-"}</td>
     </tr>
   );
