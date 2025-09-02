@@ -490,7 +490,7 @@ export default function ThesisPage() {
       {/* Proposal Submission Form */}
       {canSubmitNewProposal() && (
         <div className="max-w-4xl mx-auto bg-white p-6 rounded-lg shadow-md mb-8">
-          <h3 className="text-xl font-semibold mb-4">
+          <h3 className="text-gray-700 text-xl font-semibold mb-4">
             {proposalData &&
             (proposalData.status === "Rejected" ||
               proposalData.status === "RevisionRequested")
@@ -510,7 +510,7 @@ export default function ThesisPage() {
                 placeholder="Enter your research topic"
                 value={form.research_topic}
                 onChange={handleChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="text-gray-700 w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
             </div>
 
@@ -524,7 +524,7 @@ export default function ThesisPage() {
                 placeholder="Enter your thesis title"
                 value={form.title}
                 onChange={handleChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="text-gray-700 w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
             </div>
 
@@ -538,7 +538,7 @@ export default function ThesisPage() {
                 value={form.background}
                 onChange={handleChange}
                 rows={4}
-                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="text-gray-700 w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
             </div>
 
@@ -552,7 +552,7 @@ export default function ThesisPage() {
                 value={form.objective}
                 onChange={handleChange}
                 rows={3}
-                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="text-gray-700 w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
             </div>
 
@@ -566,7 +566,7 @@ export default function ThesisPage() {
                 value={form.methodology}
                 onChange={handleChange}
                 rows={4}
-                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="text-gray-700 w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
             </div>
 
@@ -581,7 +581,7 @@ export default function ThesisPage() {
                   placeholder="Enter estimated cost"
                   value={form.estimated_cost}
                   onChange={handleChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="text-gray-700 w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
 
@@ -595,7 +595,7 @@ export default function ThesisPage() {
                   placeholder="Enter expected timeline"
                   value={form.timeline}
                   onChange={handleChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="text-gray-700 w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
             </div>
@@ -610,7 +610,7 @@ export default function ThesisPage() {
                 value={form.references}
                 onChange={handleChange}
                 rows={3}
-                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="text-gray-700 w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
             </div>
 
@@ -662,7 +662,9 @@ export default function ThesisPage() {
 
       {/* Thesis Progress Timeline */}
       <div className="max-w-4xl mx-auto">
-        <h3 className="text-2xl font-semibold mb-6">Thesis Progress</h3>
+        <h3 className="text-gray-700 text-2xl font-semibold mb-6">
+          Thesis Progress
+        </h3>
         <div className="bg-white p-6 rounded-lg shadow-md">
           <div className="space-y-4">
             {[
