@@ -18,8 +18,8 @@ export default function ThesisPage() {
   const [message, setMessage] = useState("");
   const [studentInfo, setStudentInfo] = useState(null);
 
-  // raw progress from server
-  const [progress, setProgress] = useState([]);
+  // raw progress from server (object with current_stage + unlocked_stages)
+  const [progress, setProgress] = useState(null);
 
   // Proposal
   const [proposalData, setProposalData] = useState(null);
@@ -45,19 +45,25 @@ export default function ThesisPage() {
   // Thesis form
   const [thesisForm, setThesisForm] = useState({ title: "", abstract: "" });
   const [thesisFile, setThesisFile] = useState(null);
-  const [fileResetKey, setFileResetKey] = useState(0); // to clear file input after submit
+  const [fileResetKey, setFileResetKey] = useState(0); // clears thesis file input after submit
 
-  // derived flags
+  // ---------- Derived flags ----------
+  const unlocked = useMemo(
+    () => new Set(progress?.unlocked_stages || []),
+    [progress]
+  );
+
   const proposalAccepted =
     (proposalData && APPROVED_STATUSES.includes(proposalData.status)) ||
-    progress?.some(
-      (s) => (s.step === "Thesis" || s.step === "Thesis Upload") && s.unlocked
-    );
+    unlocked.has("Thesis") ||
+    unlocked.has("Thesis Upload") ||
+    progress?.current_stage === "Thesis";
 
   const thesisApproved =
     thesisData &&
     (thesisData.status === "PGCApproved" || thesisData.status === "Approved");
 
+  // ---------- Fetch all ----------
   useEffect(() => {
     const fetchAll = async () => {
       try {
@@ -68,7 +74,6 @@ export default function ThesisPage() {
           setPageLoading(false);
           return;
         }
-
         const headers = { Authorization: `Bearer ${token}` };
 
         // Progress/eligibility
@@ -76,7 +81,7 @@ export default function ThesisPage() {
           headers,
         });
         const pdata = progressRes.data;
-        setProgress(Array.isArray(pdata.progress) ? pdata.progress : []);
+        setProgress(pdata.progress || null);
         if (pdata.isEligible !== undefined) setEligible(pdata.isEligible);
         if (pdata.studentInfo) setStudentInfo(pdata.studentInfo);
         if (pdata.message) setMessage(pdata.message);
@@ -95,7 +100,9 @@ export default function ThesisPage() {
               title: pr.data.proposal.title || t.title,
             }));
           }
-        } catch {}
+        } catch {
+          /* no existing proposal is fine */
+        }
 
         // Thesis
         try {
@@ -106,7 +113,9 @@ export default function ThesisPage() {
             setThesisData(tr.data.thesis);
             setStatus((s) => ({ ...s, thesis: tr.data.thesis.status }));
           }
-        } catch {}
+        } catch {
+          /* no existing thesis yet */
+        }
       } catch (e) {
         console.error(e);
         setMessage("Failed to load data.");
@@ -230,7 +239,7 @@ export default function ThesisPage() {
   const thesisDisabledReason = useMemo(() => {
     if (!proposalAccepted) return "Your proposal must be accepted first.";
     if (!canSubmitThesis) {
-      if (!thesisData) return ""; // handled by fields required
+      if (!thesisData) return ""; // handled by required fields
       if (["Submitted", "Under Review"].includes(thesisData.status))
         return "Your thesis is already under review.";
       if (thesisApproved) return "Your thesis is already approved.";
@@ -261,29 +270,24 @@ export default function ThesisPage() {
         headers: { Authorization: `Bearer ${token}` },
         body: fd,
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Failed to submit thesis.");
 
-      setMessage("Thesis submitted successfully!");
-
-      // refresh thesis info from backend to keep UI in sync
-      const tr = await axios.get(`${API}/api/students/my-thesis`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (tr.data?.thesis) {
-        setThesisData(tr.data.thesis);
-        setStatus((s) => ({ ...s, thesis: tr.data.thesis.status }));
-      } else {
-        setThesisData(data.thesis);
-        setStatus((s) => ({
-          ...s,
-          thesis: data.thesis?.status || "Submitted",
-        }));
+      // Attempt to parse JSON for any server message
+      let data = {};
+      try {
+        data = await res.json();
+      } catch {
+        /* ignore */
+      }
+      if (!res.ok) {
+        setMessage(data.message || "Failed to submit thesis.");
+        return;
       }
 
-      // clear file input
+      setMessage("Thesis submitted successfully!");
+      setThesisData(data.thesis);
+      setStatus((s) => ({ ...s, thesis: data.thesis.status }));
       setThesisFile(null);
-      setFileResetKey((k) => k + 1);
+      setFileResetKey((k) => k + 1); // clear the file input
     } catch (e) {
       console.error(e);
       setMessage(e.message || "Error submitting thesis.");
@@ -705,7 +709,7 @@ export default function ThesisPage() {
                 PDF Attachment *
               </label>
               <input
-                key={fileResetKey} // lets us clear after submit
+                key={fileResetKey}
                 type="file"
                 accept="application/pdf"
                 onChange={handleThesisFileChange}
@@ -716,11 +720,6 @@ export default function ThesisPage() {
 
             <button
               type="submit"
-              onClick={(e) => {
-                e.preventDefault();
-                if (!canSubmitThesis) return;
-                handleSubmitThesis();
-              }}
               disabled={loading || !canSubmitThesis}
               className={`py-3 px-6 rounded-md text-white font-semibold ${
                 loading || !canSubmitThesis
