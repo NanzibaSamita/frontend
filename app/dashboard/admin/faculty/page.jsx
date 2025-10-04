@@ -3,9 +3,11 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
+import axios from "axios";
+
 export default function AddFacultyPage() {
   const [form, setForm] = useState({
-    user_id: "",            // <-- employee/faculty ID typed by user
+    user_id: "",            
     email: "",
     first_name: "",
     last_name: "",
@@ -15,7 +17,12 @@ export default function AddFacultyPage() {
     research_interests: "",
   });
   const [loading, setLoading] = useState(false);
-  const [creds, setCreds] = useState(null); // backend returns {credentials:{email,password}}
+  const [creds, setCreds] = useState(null); 
+  const [successMessage, setSuccessMessage] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
+  const [bulkUploading, setBulkUploading] = useState(false);
+  const [bulkResult, setBulkResult] = useState(null);
+
   const router = useRouter();
 
   const handleChange = (e) => {
@@ -31,13 +38,11 @@ export default function AddFacultyPage() {
     try {
       const token = localStorage.getItem("token");
       if (!token) {
-        alert("You must be logged in as admin to perform this action.");
+        setErrorMessage("You must be logged in as admin to perform this action.");
         setLoading(false);
         return;
       }
 
-      // 🔗 Map frontend field to backend contract:
-      // frontend: user_id  -> backend: faculty_number
       const payload = {
         faculty_number: form.user_id,
         email: form.email,
@@ -59,15 +64,17 @@ export default function AddFacultyPage() {
       });
 
       const data = await res.json();
+      setErrorMessage("");
+      setSuccessMessage("");
 
       if (!res.ok) {
-        alert(data?.message || "Failed to create faculty.");
+        setErrorMessage(data?.message || "Failed to create faculty.");
         setLoading(false);
         return;
       }
 
       setCreds(data?.credentials || null);
-      alert(data?.message || "Faculty created successfully!");
+      setSuccessMessage(data?.message || "Faculty account created successfully!");
 
       // Clear the form
       setForm({
@@ -90,6 +97,53 @@ export default function AddFacultyPage() {
       setLoading(false);
     }
   };
+
+  const handleBulkUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setBulkUploading(true);
+    setBulkResult(null);
+
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        alert("You must be logged in as admin to perform this action.");
+        setBulkUploading(false);
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const res = await axios.post(
+        "http://localhost:8080/api/admin/create-faculty/bulk-upload",
+        formData,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
+
+      setBulkResult(res.data);
+    } catch (error) {
+      console.error("Bulk upload error:", error);
+      setBulkResult({
+        message: "Bulk upload failed",
+        errors: [
+          {
+            reason:
+              error.response?.data?.message ||
+              "Unknown error. Please check your file and try again.",
+          },
+        ],
+      });
+    } finally {
+      setBulkUploading(false);
+    }
+  };
+
 
   return (
     <div className="flex">
@@ -133,7 +187,6 @@ export default function AddFacultyPage() {
                 value={form.user_id}
                 onChange={handleChange}
                 className="mt-2 p-3 border border-gray-300 rounded-md"
-                placeholder="e.g., FAC11231001"
                 required
               />
             </div>
@@ -162,9 +215,11 @@ export default function AddFacultyPage() {
                 required
               >
                 <option value="">Select Department</option>
-                <option value="Computer Science">Computer Science</option>
-                <option value="Electrical Engineering">Electrical Engineering</option>
-                <option value="Business">Business</option>
+                <option value="CSE">CSE</option>
+                <option value="EEE">EEE</option>
+                <option value="CE">CE</option>
+                <option value="ME">ME</option>
+                <option value="TVE">TVE</option>
               </select>
             </div>
 
@@ -211,6 +266,17 @@ export default function AddFacultyPage() {
                 placeholder="e.g., Machine Learning, NLP, Data Mining"
               />
             </div>
+            {/* Status Messages */}
+            {successMessage && (
+              <div className="mb-4 p-3 text-green-800 bg-green-100 border border-green-300 rounded-md">
+                {successMessage}
+              </div>
+            )}
+            {errorMessage && (
+              <div className="mb-4 p-3 text-red-800 bg-red-100 border border-red-300 rounded-md">
+                {errorMessage}
+              </div>
+            )}
 
             <div className="md:col-span-2 mt-4 text-center">
               <button
@@ -234,6 +300,39 @@ export default function AddFacultyPage() {
               <div className="text-xs mt-2">Credentials have also been emailed.</div>
             </div>
           )}
+
+          <hr className="my-8" />
+        <h2 className="text-xl font-semibold mb-2">Bulk Upload Faculty via CSV</h2>
+
+        <input
+          type="file"
+          accept=".csv"
+          onChange={handleBulkUpload}
+          disabled={bulkUploading}
+          className="mb-2"
+        />
+
+        {bulkUploading && <div className="text-blue-600">Uploading...</div>}
+        {bulkResult && (
+          <div className="mt-4 p-4 border rounded bg-gray-50">
+            <div className="font-bold">{bulkResult.message}</div>
+            <div>Total Records: {bulkResult.total || 0}</div>
+            <div>Failed: {bulkResult.failed || 0}</div>
+            {bulkResult.errors && bulkResult.errors.length > 0 && (
+              <div className="mt-2">
+                <div className="font-semibold">Errors:</div>
+                <ul className="list-disc list-inside text-sm text-red-700">
+                  {bulkResult.errors.map((err, idx) => (
+                    <li key={idx}>
+                      {err.faculty_number ? `Faculty ${err.faculty_number}: ` : ""}
+                      {err.reason}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        )}
         </div>
       </div>
     </div>
