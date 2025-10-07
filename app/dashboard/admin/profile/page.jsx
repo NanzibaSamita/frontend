@@ -81,14 +81,6 @@ export default function AdminProfilePage() {
           </div>
         </div>
 
-        <div className="mt-6 flex space-x-4 px-10">
-          <button className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700">
-            Edit Profile
-          </button>
-          <button className="bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700">
-            Change Password
-          </button>
-        </div>
       </main>
     </div>
   );

@@ -162,9 +162,11 @@ export default function AddFacultyPage() {
                 required
               >
                 <option value="">Select Department</option>
-                <option value="Computer Science">Computer Science</option>
-                <option value="Electrical Engineering">Electrical Engineering</option>
-                <option value="Business">Business</option>
+                <option value="CSE">Computer Science & Engineering</option>
+                <option value="EEE">Electrical & Electronics Engineering</option>
+                <option value="BTM">Business & Technology Management</option>
+                <option value="CEE">Civil and Environmental Engineering</option>
+                <option value="MPE">Mechanical & Production Engineering</option>
               </select>
             </div>
 

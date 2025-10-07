@@ -1,8 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
 export default function SupervisorPage() {
+  const API = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080";
+
   const [supervisors, setSupervisors] = useState([]);
   const [assignment, setAssignment] = useState(null);
   const [selectedSupervisors, setSelectedSupervisors] = useState([]);
@@ -12,78 +14,113 @@ export default function SupervisorPage() {
   const [eligible, setEligible] = useState(false);
   const [pageState, setPageState] = useState("loading"); // loading, not_assigned, pending, assigned
 
-  // Fetch all data and determine page state
+  // Avoid double-running effects in React 18 Strict Mode (dev)
+  const hasFetchedRef = useRef(false);
+
   useEffect(() => {
+    if (hasFetchedRef.current) return; // guard in dev
+    hasFetchedRef.current = true;
+
+    const ac = new AbortController();
+
     const fetchData = async () => {
       try {
         setPageLoading(true);
         const token = localStorage.getItem("token");
+        const commonHeaders = token
+          ? { Authorization: `Bearer ${token}` }
+          : undefined;
 
-        // Check if assignment exists first
+        // 1) Check for existing assignment
         const assignRes = await fetch(
-          "http://localhost:8080/api/students/assignment/check-status",
-          { headers: { Authorization: `Bearer ${token}` } }
+          `${API}/api/students/assignment/check-status`,
+          { headers: commonHeaders, signal: ac.signal }
         );
 
         if (assignRes.ok) {
-          const assignData = await assignRes.json();
-          setAssignment(assignData.assignment);
-          
-          // Determine state based on assignment status
-          if (assignData.assignment.overall_status === "Assigned") {
-            setPageState("assigned");
-          } else {
-            setPageState("pending");
-          }
-        } else {
-          // No assignment exists, check eligibility and load supervisors
-          const eligRes = await fetch(
-            "http://localhost:8080/api/students/supervisor-assignment/check-eligibility",
-            { headers: { Authorization: `Bearer ${token}` } }
-          );
-          const eligData = await eligRes.json();
-          setEligible(eligData.isEligible || false);
+          // Be defensive about JSON shape
+          const assignData = await assignRes
+            .json()
+            .catch(() => ({ assignment: null }));
+          const assn = assignData?.assignment ?? null;
+          setAssignment(assn);
 
-          // Fetch available supervisors
-          const supRes = await fetch(
-            "http://localhost:8080/api/students/supervisor-assignment/available",
-            { headers: { Authorization: `Bearer ${token}` } }
-          );
-          const supData = await supRes.json();
-          setSupervisors(supData.availableSupervisors || []);
-          
+          if (assn && assn.overall_status === "Assigned") {
+            setPageState("assigned");
+          } else if (assn) {
+            setPageState("pending");
+          } else {
+            // No assignment object returned, treat as not assigned
+            await loadEligibilityAndSupervisors({ headers: commonHeaders, signal: ac.signal });
+            setPageState("not_assigned");
+          }
+        } else if (assignRes.status === 404) {
+          // Explicitly handle 404 as "no assignment yet"
+          await loadEligibilityAndSupervisors({ headers: commonHeaders, signal: ac.signal });
           setPageState("not_assigned");
+        } else {
+          // Other server errors
+          const text = await assignRes.text().catch(() => "");
+          throw new Error(`Assignment check failed: ${assignRes.status} ${text}`);
         }
       } catch (err) {
+        if (ac.signal.aborted) return;
         console.error("Error fetching data:", err);
         setMessage("Failed to load data.");
         setPageState("not_assigned");
       } finally {
-        setPageLoading(false);
+        if (!ac.signal.aborted) setPageLoading(false);
       }
     };
+
+    const loadEligibilityAndSupervisors = async (init) => {
+      // 2) Eligibility
+      const eligRes = await fetch(
+        `${API}/api/students/supervisor-assignment/check-eligibility`,
+        init
+      );
+      const eligData = await eligRes
+        .json()
+        .catch(() => ({ isEligible: false }));
+      setEligible(Boolean(eligData?.isEligible));
+
+      // 3) Available supervisors
+      const supRes = await fetch(
+        `${API}/api/students/supervisor-assignment/available`,
+        init
+      );
+      const supData = await supRes
+        .json()
+        .catch(() => ({ availableSupervisors: [] }));
+      const list = Array.isArray(supData?.availableSupervisors)
+        ? supData.availableSupervisors.filter(Boolean)
+        : [];
+      setSupervisors(list);
+    };
+
     fetchData();
+
+    return () => ac.abort();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Handle supervisor select
   const handleSupervisorSelect = (e) => {
     const value = e.target.value;
     setMessage("");
 
+    if (!value) return;
     if (selectedSupervisors.includes(value)) return;
     if (selectedSupervisors.length < 3) {
-      setSelectedSupervisors([...selectedSupervisors, value]);
+      setSelectedSupervisors((prev) => [...prev, value]);
     } else {
       setMessage("You can select up to 3 supervisors.");
     }
   };
 
-  // Remove supervisor
   const handleRemoveSupervisor = (id) => {
-    setSelectedSupervisors(selectedSupervisors.filter((sup) => sup !== id));
+    setSelectedSupervisors((prev) => prev.filter((sup) => sup !== id));
   };
 
-  // Submit request
   const handleSubmit = async () => {
     if (!eligible) {
       setMessage("You are not eligible (need ≥ 9 credits).");
@@ -100,26 +137,24 @@ export default function SupervisorPage() {
 
       const token = localStorage.getItem("token");
       const res = await fetch(
-        "http://localhost:8080/api/students/supervisor-assignment/create",
+        `${API}/api/students/supervisor-assignment/create`,
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
           },
-          body: JSON.stringify({
-            priorityFacultyIds: selectedSupervisors,
-          }),
+          body: JSON.stringify({ priorityFacultyIds: selectedSupervisors }),
         }
       );
 
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setMessage(data.message || "Failed to create assignment.");
+        setMessage(data?.message || "Failed to create assignment.");
       } else {
         setMessage("Supervisor Assignment Request Created!");
-        // Refresh the page to show pending state
-        window.location.reload();
+        // Refresh to show pending state
+        if (typeof window !== "undefined") window.location.reload();
       }
     } catch (err) {
       console.error(err);
@@ -129,7 +164,6 @@ export default function SupervisorPage() {
     }
   };
 
-  // Loading state
   if (pageLoading) {
     return (
       <main className="flex-1 p-8">
@@ -176,12 +210,15 @@ export default function SupervisorPage() {
                   <option value="" disabled>
                     Select Supervisor
                   </option>
-                  {supervisors.map((sup) => (
-                    <option key={sup._id} value={sup._id}>
-                      {sup.user_id.first_name} {sup.user_id.last_name} - {sup.designation}
-                      ({sup.current_supervision_count}/{sup.max_supervision_capacity})
-                    </option>
-                  ))}
+                  {supervisors.map((sup) => {
+                    const u = sup?.user_id || {};
+                    const name = [u.first_name, u.last_name].filter(Boolean).join(" ") || "Unnamed";
+                    return (
+                      <option key={sup?._id} value={sup?._id}>
+                        {name} - {sup?.designation || "N/A"} ({sup?.current_supervision_count ?? 0}/{sup?.max_supervision_capacity ?? 0})
+                      </option>
+                    );
+                  })}
                 </select>
 
                 <button
@@ -204,17 +241,16 @@ export default function SupervisorPage() {
                 <h4 className="font-semibold mb-3">Selected Priority List:</h4>
                 <div className="space-y-2">
                   {selectedSupervisors.map((id, idx) => {
-                    const sup = supervisors.find((s) => s._id === id);
+                    const sup = supervisors.find((s) => s?._id === id);
+                    const u = sup?.user_id || {};
+                    const name = [u.first_name, u.last_name].filter(Boolean).join(" ") || "Unknown";
                     return (
                       <div
                         key={id}
                         className="bg-blue-50 border border-blue-200 text-blue-800 px-4 py-3 rounded-md flex justify-between items-center"
                       >
                         <span>
-                          <strong>Priority {idx + 1}:</strong>{" "}
-                          {sup
-                            ? `${sup.user_id.first_name} ${sup.user_id.last_name} - ${sup.designation}`
-                            : "Unknown"}
+                          <strong>Priority {idx + 1}:</strong> {name} - {sup?.designation || "N/A"}
                         </span>
                         <button
                           className="text-red-600 hover:text-red-800 font-bold text-lg"
@@ -235,59 +271,59 @@ export default function SupervisorPage() {
         {pageState === "pending" && assignment && (
           <div>
             <div className="mb-6 p-4 bg-yellow-50 border border-yellow-300 text-yellow-800 rounded-lg">
-              <strong>Status:</strong> {assignment.overall_status} - Waiting for supervisor and PGC approval
+              <strong>Status:</strong> {assignment?.overall_status} - Waiting for supervisor and PGC approval
             </div>
 
             <div className="mb-6">
               <h3 className="text-xl font-semibold mb-4">Your Priority List</h3>
               <div className="space-y-3">
-                {assignment.priority_list?.map((p, idx) => {
-                  const faculty = p.faculty_id;
-                  const isCurrentPriority = idx === assignment.current_priority_index;
-                  
-                  return (
-                    <div
-                      key={p._id}
-                      className={`p-4 border rounded-lg ${
-                        isCurrentPriority ? 'border-blue-500 bg-blue-50' : 'border-gray-200 bg-gray-50'
-                      }`}
-                    >
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <h4 className="font-semibold">
-                            Priority {idx + 1}: {faculty?.user_id?.first_name} {faculty?.user_id?.last_name}
-                          </h4>
-                          <p className="text-sm text-gray-800 mt-1">
-                            {faculty?.designation} | {faculty?.specialization}
-                          </p>
-                          <p className="text-sm text-gray-800">
-                            Department: {faculty?.user_id?.department}
-                          </p>
-                          {faculty?.research_interests && (
-                            <p className="text-sm text-gray-700 mt-1">
-                              Research: {faculty.research_interests}
+                {Array.isArray(assignment?.priority_list) &&
+                  assignment.priority_list.map((p, idx) => {
+                    const faculty = p?.faculty_id || {};
+                    const u = faculty?.user_id || {};
+                    const isCurrentPriority = idx === (assignment?.current_priority_index ?? -1);
+                    const name = [u.first_name, u.last_name].filter(Boolean).join(" ") || "Unknown";
+
+                    return (
+                      <div
+                        key={p?._id || idx}
+                        className={`p-4 border rounded-lg ${
+                          isCurrentPriority ? "border-blue-500 bg-blue-50" : "border-gray-200 bg-gray-50"
+                        }`}
+                      >
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <h4 className="font-semibold">Priority {idx + 1}: {name}</h4>
+                            <p className="text-sm text-gray-800 mt-1">
+                              {faculty?.designation || "N/A"} | {faculty?.specialization || "N/A"}
                             </p>
-                          )}
-                        </div>
-                        <div className="text-right">
-                          <span className={`inline-block px-3 py-1 text-xs rounded-full ${
-                            p.status === 'SupervisorAccepted' ? 'bg-green-100 text-green-800' :
-                            p.status === 'Requested' ? 'bg-yellow-100 text-yellow-800' :
-                            p.status === 'SupervisorRejected' ? 'bg-red-100 text-red-800' :
-                            'bg-gray-100 text-gray-800'
-                          }`}>
-                            {p.status.replace(/([A-Z])/g, ' $1').trim()}
-                          </span>
-                          {isCurrentPriority && (
-                            <div className="text-xs text-blue-600 mt-1 font-semibold">
-                              Current Priority
-                            </div>
-                          )}
+                            <p className="text-sm text-gray-800">Department: {u?.department || "N/A"}</p>
+                            {faculty?.research_interests && (
+                              <p className="text-sm text-gray-700 mt-1">Research: {faculty.research_interests}</p>
+                            )}
+                          </div>
+                          <div className="text-right">
+                            <span
+                              className={`inline-block px-3 py-1 text-xs rounded-full ${
+                                p?.status === "SupervisorAccepted"
+                                  ? "bg-green-100 text-green-800"
+                                  : p?.status === "Requested"
+                                  ? "bg-yellow-100 text-yellow-800"
+                                  : p?.status === "SupervisorRejected"
+                                  ? "bg-red-100 text-red-800"
+                                  : "bg-gray-100 text-gray-800"
+                              }`}
+                            >
+                              {(p?.status || "Unknown").replace(/([A-Z])/g, " $1").trim()}
+                            </span>
+                            {isCurrentPriority && (
+                              <div className="text-xs text-blue-600 mt-1 font-semibold">Current Priority</div>
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
               </div>
             </div>
 
@@ -314,40 +350,25 @@ export default function SupervisorPage() {
               <div className="bg-gray-50 px-6 py-4 border-b">
                 <h3 className="text-gray-800 font-semibold">Your Assigned Supervisor</h3>
               </div>
-              
+
               <div className="p-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {/* Supervisor Info */}
                   <div>
                     <h4 className="font-semibold text-lg mb-4 text-gray-800">Supervisor Details</h4>
                     <div className="space-y-3">
-                      <InfoItem 
-                        label="Name" 
-                        value={`${assignment.accepted_faculty?.user_id?.first_name || ''} ${assignment.accepted_faculty?.user_id?.last_name || ''}`} 
+                      <InfoItem
+                        label="Name"
+                        value={`${assignment?.accepted_faculty?.user_id?.first_name || ""} ${assignment?.accepted_faculty?.user_id?.last_name || ""}`.trim() || "N/A"}
                       />
-                      <InfoItem 
-                        label="Designation" 
-                        value={assignment.accepted_faculty?.designation || 'N/A'} 
-                      />
-                      <InfoItem 
-                        label="Department" 
-                        value={assignment.accepted_faculty?.user_id?.department || 'N/A'} 
-                      />
-                      <InfoItem 
-                        label="Specialization" 
-                        value={assignment.accepted_faculty?.specialization || 'N/A'} 
-                      />
-                      <InfoItem 
-                        label="Research Interests" 
-                        value={assignment.accepted_faculty?.research_interests || 'N/A'} 
-                      />
-                      <InfoItem 
-                        label="Email" 
-                        value={assignment.accepted_faculty?.user_id?.email || 'N/A'} 
-                      />
-                      <InfoItem 
-                        label="Current Students" 
-                        value={`${assignment.accepted_faculty?.current_supervision_count || 0}/${assignment.accepted_faculty?.max_supervision_capacity || 0}`} 
+                      <InfoItem label="Designation" value={assignment?.accepted_faculty?.designation || "N/A"} />
+                      <InfoItem label="Department" value={assignment?.accepted_faculty?.user_id?.department || "N/A"} />
+                      <InfoItem label="Specialization" value={assignment?.accepted_faculty?.specialization || "N/A"} />
+                      <InfoItem label="Research Interests" value={assignment?.accepted_faculty?.research_interests || "N/A"} />
+                      <InfoItem label="Email" value={assignment?.accepted_faculty?.user_id?.email || "N/A"} />
+                      <InfoItem
+                        label="Current Students"
+                        value={`${assignment?.accepted_faculty?.current_supervision_count ?? 0}/${assignment?.accepted_faculty?.max_supervision_capacity ?? 0}`}
                       />
                     </div>
                   </div>
@@ -356,25 +377,15 @@ export default function SupervisorPage() {
                   <div>
                     <h4 className="font-semibold text-lg mb-4 text-gray-800">Assignment Details</h4>
                     <div className="space-y-3">
-                      <InfoItem 
-                        label="Request Date" 
-                        value={new Date(assignment.createdAt).toLocaleDateString('en-GB')} 
+                      <InfoItem
+                        label="Request Date"
+                        value={assignment?.createdAt ? new Date(assignment.createdAt).toLocaleDateString("en-GB") : "N/A"}
                       />
-                      <InfoItem 
-                        label="Status" 
-                        value={assignment.overall_status} 
-                      />
-                      <InfoItem 
-                        label="Research Area" 
-                        value={assignment.research_area || 'N/A'} 
-                      />
-                      <InfoItem 
-                        label="Proposed Title" 
-                        value={assignment.proposed_title || 'N/A'} 
-                      />
+                      <InfoItem label="Status" value={assignment?.overall_status || "N/A"} />
+                      <InfoItem label="Research Area" value={assignment?.research_area || "N/A"} />
+                      <InfoItem label="Proposed Title" value={assignment?.proposed_title || "N/A"} />
                     </div>
 
-                    {/* Next steps */}
                     <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
                       <h5 className="font-semibold text-blue-800 mb-2">Next Steps:</h5>
                       <ul className="text-sm text-blue-700 space-y-1">
@@ -388,117 +399,47 @@ export default function SupervisorPage() {
               </div>
             </div>
 
-            {/* Show original priority list */}
             <div className="mt-6">
               <h4 className="font-semibold text-gray-500">Your Original Priority List</h4>
               <div className="space-y-2">
-                {assignment.priority_list?.map((p, idx) => {
-                  const faculty = p.faculty_id;
-                  const isAssigned = assignment.accepted_faculty?._id === faculty?._id;
-                  
-                  return (
-                    <div
-                      key={p._id}
-                      className={`p-3 border rounded-lg ${
-                        isAssigned ? 'border-green-500 bg-green-50' : 'border-gray-200 bg-gray-50'
-                      }`}
-                    >
-                      <div className="flex justify-between items-center">
-                        <span className="text-gray-500">
-                          <strong>Priority {idx + 1}:</strong> {faculty?.user_id?.first_name} {faculty?.user_id?.last_name}
-                          {isAssigned && <span className="ml-2 text-green-600 font-semibold">(Assigned)</span>}
-                        </span>
-                        <span className={`text-xs px-2 py-1 rounded-full ${
-                          p.status === 'PGCAccepted' ? 'bg-green-100 text-green-800' :
-                          p.status === 'SupervisorAccepted' ? 'bg-blue-100 text-blue-800' :
-                          p.status === 'SupervisorRejected' ? 'bg-red-100 text-red-800' :
-                          'bg-gray-100 text-gray-800'
-                        }`}>
-                          {p.status.replace(/([A-Z])/g, ' $1').trim()}
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-        )}
+                {Array.isArray(assignment?.priority_list) &&
+                  assignment.priority_list.map((p, idx) => {
+                    const faculty = p?.faculty_id || {};
+                    const u = faculty?.user_id || {};
+                    const isAssigned = assignment?.accepted_faculty?._id === faculty?._id;
+                    const name = [u.first_name, u.last_name].filter(Boolean).join(" ") || "Unknown";
 
-        {/* State 2: Assignment pending - show priority list with status */}
-        {pageState === "pending" && assignment && (
-          <div>
-            <div className="mb-6 p-4 bg-yellow-50 border border-yellow-300 text-yellow-800 rounded-lg">
-              <strong>Status:</strong> {assignment.overall_status} - Your request is being processed
-            </div>
-
-            <div className="mb-6">
-              <h3 className="text-xl text-gray-700 font-semibold mb-4">Your Priority List</h3>
-              <div className="space-y-3">
-                {assignment.priority_list?.map((p, idx) => {
-                  const faculty = p.faculty_id;
-                  const isCurrentPriority = idx === assignment.current_priority_index;
-                  
-                  return (
-                    <div
-                      key={p._id}
-                      className={`p-4 border rounded-lg ${
-                        isCurrentPriority ? 'border-blue-500 bg-blue-50' : 'border-gray-200 bg-gray-50'
-                      }`}
-                    >
-                      <div className="flex justify-between items-start">
-                        <div className="flex-1">
-                          <h4 className="font-semibold">
-                            Priority {idx + 1}: {faculty?.user_id?.first_name} {faculty?.user_id?.last_name}
-                          </h4>
-                          <p className="text-sm text-gray-800 mt-1">
-                            {faculty?.designation} | {faculty?.specialization}
-                          </p>
-                          <p className="text-sm text-gray-800">
-                            Department: {faculty?.user_id?.department}
-                          </p>
-                          <p className="text-sm text-gray-800">
-                            Email: {faculty?.user_id?.email}
-                          </p>
-                          {faculty?.research_interests && (
-                            <p className="text-sm text-gray-700 mt-1">
-                              Research: {faculty.research_interests}
-                            </p>
-                          )}
-                          <p className="text-sm text-gray-800">
-                            Current Students: {faculty?.current_supervision_count || 0}/{faculty?.max_supervision_capacity || 0}
-                          </p>
-                        </div>
-                        <div className="text-right ml-4">
-                          <span className={`inline-block px-3 py-1 text-xs rounded-full ${
-                            p.status === 'SupervisorAccepted' ? 'bg-green-100 text-green-800' :
-                            p.status === 'Requested' ? 'bg-yellow-100 text-yellow-800' :
-                            p.status === 'SupervisorRejected' ? 'bg-red-100 text-red-800' :
-                            p.status === 'PGCAccepted' ? 'bg-green-100 text-green-800' :
-                            'bg-gray-100 text-gray-800'
-                          }`}>
-                            {p.status.replace(/([A-Z])/g, ' $1').trim()}
+                    return (
+                      <div
+                        key={p?._id || idx}
+                        className={`p-3 border rounded-lg ${
+                          isAssigned ? "border-green-500 bg-green-50" : "border-gray-200 bg-gray-50"
+                        }`}
+                      >
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-500">
+                            <strong>Priority {idx + 1}:</strong> {name}
+                            {isAssigned && (
+                              <span className="ml-2 text-green-600 font-semibold">(Assigned)</span>
+                            )}
                           </span>
-                          {isCurrentPriority && (
-                            <div className="text-xs text-blue-600 mt-1 font-semibold">
-                              Current Priority
-                            </div>
-                          )}
+                          <span
+                            className={`text-xs px-2 py-1 rounded-full ${
+                              p?.status === "PGCAccepted"
+                                ? "bg-green-100 text-green-800"
+                                : p?.status === "SupervisorAccepted"
+                                ? "bg-blue-100 text-blue-800"
+                                : p?.status === "SupervisorRejected"
+                                ? "bg-red-100 text-red-800"
+                                : "bg-gray-100 text-gray-800"
+                            }`}
+                          >
+                            {(p?.status || "Unknown").replace(/([A-Z])/g, " $1").trim()}
+                          </span>
                         </div>
                       </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg">
-              <h4 className="font-semibold mb-2">Process Status:</h4>
-              <div className="text-sm text-gray-700 space-y-1">
-                <p>• Your request has been submitted and is being processed</p>
-                <p>• The system is currently working on Priority {(assignment.current_priority_index || 0) + 1}</p>
-                <p>• You will receive notifications about status updates</p>
-                <p>• If one supervisor declines, the system automatically moves to your next choice</p>
+                    );
+                  })}
               </div>
             </div>
           </div>
@@ -506,9 +447,7 @@ export default function SupervisorPage() {
 
         {/* Global message */}
         {message && (
-          <div className="mt-6 p-4 bg-yellow-50 border border-yellow-300 text-yellow-800 rounded-lg">
-            {message}
-          </div>
+          <div className="mt-6 p-4 bg-yellow-50 border border-yellow-300 text-yellow-800 rounded-lg">{message}</div>
         )}
       </div>
     </main>

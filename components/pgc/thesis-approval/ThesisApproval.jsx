@@ -156,7 +156,7 @@ export default function ThesisApproval() {
         // ---------- Pending ----------
         let pendingPayload =
           (await getJSON(PRIMARY_PENDING)) ?? (await getJSON(FALLBACK_PENDING)); // /pgc/supervision-requests
-
+        console.log(pendingPayload);
         // Normalize to an array
         let pendingArray = [];
         if (Array.isArray(pendingPayload?.proposals))
@@ -176,7 +176,7 @@ export default function ThesisApproval() {
         let approvedPayload =
           (await getJSON(PRIMARY_APPROVED)) ??
           (await getJSON(FALLBACK_APPROVED)); // /pgc/assigned-supervisors
-
+        console.log(approvedPayload)
         let approvedArray = [];
         if (Array.isArray(approvedPayload?.proposals))
           approvedArray = approvedPayload.proposals;

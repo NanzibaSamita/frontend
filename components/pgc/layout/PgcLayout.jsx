@@ -3,7 +3,7 @@ import PgcSidebar from "./PgcSidebar";
 
 export default function PgcLayout({ children }) {
   return (
-    <div className="flex text-black min-h-screen">
+    <div className="flex text-black max-h-screen ">
       <PgcSidebar />
 
       <section className="p-6 bg-white">{children}</section>
