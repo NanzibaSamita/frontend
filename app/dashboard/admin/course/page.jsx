@@ -2,62 +2,51 @@
 
 import { useState, useEffect } from "react";
 import axios from "axios";
-import { useRouter } from "next/navigation";
 
 const CourseManagementPage = () => {
+  const [courses, setCourses] = useState([]);
   const [bulkUploading, setBulkUploading] = useState(false);
   const [bulkResult, setBulkResult] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const [students, setStudents] = useState([]); // For calculating dept counts
+  const [previewAssignments, setPreviewAssignments] = useState([]); // From bulkResult.previewAssignments
+  const [editedAssignments, setEditedAssignments] = useState({}); // { course_id: [student_ids] }
+  const [confirming, setConfirming] = useState(false);
+  const [confirmResult, setConfirmResult] = useState(null);
 
-  const [studentData, setStudentData] = useState({
-    student_id: "",
-    course_id: "",
-  });
-
-  const [studentQuery, setStudentQuery] = useState("");
-  const [filteredStudents, setFilteredStudents] = useState([]);
-  const [courseQuery, setCourseQuery] = useState("");
-  const [filteredCourses, setFilteredCourses] = useState([]);
-
-  const router = useRouter();
-
-  // --- Debounced Student Search ---
+  // --- Fetch all students on load for department mapping ---
   useEffect(() => {
-    const handler = setTimeout(async () => {
-      if (!studentQuery) return setFilteredStudents([]);
+    const fetchStudents = async () => {
       try {
         const token = localStorage.getItem("token");
-        const res = await axios.get(
-          `http://localhost:8080/api/admin/search/students?query=${studentQuery}`,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-        setFilteredStudents(res.data);
+        const res = await axios.get("http://localhost:8080/api/admin/students", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setStudents(res.data.students || []);
       } catch (err) {
-        console.error(err);
+        console.error("Error fetching students:", err);
+        setStudents([]);
       }
-    }, 300);
+    };
+    fetchStudents();
+  }, []);
 
-    return () => clearTimeout(handler);
-  }, [studentQuery]);
+  // --- Fetch courses ---
+  const fetchCourses = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const res = await axios.get("http://localhost:8080/api/admin/courses", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setCourses(res.data.courses || []);
+    } catch (err) {
+      console.error("Error fetching courses:", err);
+      setCourses([]);
+    }
+  };
 
-  // --- Debounced Course Search ---
   useEffect(() => {
-    const handler = setTimeout(async () => {
-      if (!courseQuery) return setFilteredCourses([]);
-      try {
-        const token = localStorage.getItem("token");
-        const res = await axios.get(
-          `http://localhost:8080/api/admin/search/courses?query=${courseQuery}`,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-        setFilteredCourses(res.data);
-      } catch (err) {
-        console.error(err);
-      }
-    }, 300);
-
-    return () => clearTimeout(handler);
-  }, [courseQuery]);
+    fetchCourses();
+  }, []);
 
   // --- Bulk Upload ---
   const handleBulkUpload = async (e) => {
@@ -65,15 +54,16 @@ const CourseManagementPage = () => {
     if (!file) return;
     setBulkUploading(true);
     setBulkResult(null);
+    setPreviewAssignments([]);
+    setEditedAssignments({});
+    setConfirmResult(null);
 
     try {
       const token = localStorage.getItem("token");
-      if (!token) throw new Error("Admin not logged in");
-
       const formData = new FormData();
       formData.append("file", file);
 
-      const response = await axios.post(
+      const res = await axios.post(
         "http://localhost:8080/api/admin/upload-courses",
         formData,
         {
@@ -85,8 +75,22 @@ const CourseManagementPage = () => {
       );
 
       setBulkUploading(false);
-      setBulkResult(response.data);
+      setBulkResult(res.data);
+
+      // Handle preview assignments
+      if (res.data.previewAssignments) {
+        setPreviewAssignments(res.data.previewAssignments);
+        const initialEdits = {};
+        res.data.previewAssignments.forEach((pa) => {
+          initialEdits[pa.course_id] = pa.proposed_students.map((s) => s.student_id);
+        });
+        setEditedAssignments(initialEdits);
+      }
+
+      // Fetch updated courses
+      await fetchCourses();
     } catch (err) {
+      console.error("Bulk upload error:", err);
       setBulkUploading(false);
       setBulkResult({
         message: "Bulk upload failed",
@@ -95,56 +99,42 @@ const CourseManagementPage = () => {
     }
   };
 
-  // --- Manual Assignment ---
-  const handleAssignCourse = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-
-    try {
-      const token = localStorage.getItem("token");
-      if (!token) throw new Error("Admin not logged in");
-
-      await axios.post(
-        "http://localhost:8080/api/admin/assign-course-manually",
-        studentData,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-
-      alert("✅ Course assigned successfully");
-
-      // Clear inputs after assignment
-      setStudentQuery("");
-      setCourseQuery("");
-      setFilteredStudents([]);
-      setFilteredCourses([]);
-      setStudentData({ student_id: "", course_id: "" });
-    } catch (err) {
-      alert("❌ Error assigning course: " + (err.response?.data?.message || err.message));
-    } finally {
-      setLoading(false);
-    }
+  // --- Function to calculate student count per dept for a course ---
+  const getDeptCountForCourse = (course_code) => {
+    if (!course_code || course_code.length < 3) return {};
+    const courseDept = course_code.slice(0, 3); // e.g., 'CSE'
+    const count = {};
+    students.forEach((s) => {
+      if (s.department === courseDept) {
+        count[s.department] = (count[s.department] || 0) + 1;
+      }
+    });
+    return count;
   };
 
-  // --- Auto Assignment ---
-  const handleAutoAssign = async () => {
-    setLoading(true);
+  // --- Generate Preview for Existing Courses ---
+  const generatePreviewForCourses = async (selectedCourseIds) => {
     try {
       const token = localStorage.getItem("token");
-      if (!token) throw new Error("Admin not logged in");
-
-      const response = await axios.post(
-        "http://localhost:8080/api/admin/assign-courses",
-        {},
+      const res = await axios.post(
+        "http://localhost:8080/api/admin/generate-preview",
+        { course_ids: selectedCourseIds },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-
-      alert(
-        `✅ Auto assignment done. Created: ${response.data.created}, Skipped: ${response.data.skipped}`
-      );
+      if (res.data.previewAssignments) {
+        setPreviewAssignments(res.data.previewAssignments);
+        const initialEdits = {};
+        res.data.previewAssignments.forEach((pa) => {
+          initialEdits[pa.course_id] = pa.proposed_students.map((s) => s.student_id);
+        });
+        setEditedAssignments(initialEdits);
+      }
     } catch (err) {
-      alert("❌ Auto assignment failed: " + (err.response?.data?.message || err.message));
-    } finally {
-      setLoading(false);
+      console.error("Preview generation error:", err);
+      setConfirmResult({
+        message: "Failed to generate preview",
+        errors: [{ reason: err.response?.data?.message || err.message }],
+      });
     }
   };
 
@@ -154,21 +144,35 @@ const CourseManagementPage = () => {
         <h1 className="text-4xl font-bold text-black mb-8">Manage Courses</h1>
 
         {/* --- Bulk Upload Section --- */}
-        <div className="bg-white rounded-lg shadow-md p-8 max-w-4xl mx-auto mb-8">
+        <div className="bg-white rounded-lg shadow-md p-8 max-w-5xl mx-auto mb-8">
           <h2 className="text-xl font-semibold mb-4">Bulk Upload Courses via CSV</h2>
-          <input type="file" accept=".csv" onChange={handleBulkUpload} disabled={bulkUploading} />
+          <input
+            type="file"
+            accept=".csv"
+            onChange={handleBulkUpload}
+            disabled={bulkUploading}
+            className="mb-2"
+          />
           {bulkUploading && <div className="text-blue-600 mt-2">Uploading...</div>}
           {bulkResult && (
             <div className="mt-4 p-4 border rounded bg-gray-50">
               <div className="font-bold">{bulkResult.message}</div>
               {bulkResult.total !== undefined && <div>Total Records: {bulkResult.total}</div>}
-              {bulkResult.failed !== undefined && <div>Failed: {bulkResult.failed}</div>}
-              {bulkResult.errors && bulkResult.errors.length > 0 && (
+              {bulkResult.successUploads !== undefined && (
+                <div>Successful Uploads: {bulkResult.successUploads}</div>
+              )}
+              {bulkResult.failedUploads !== undefined && (
+                <div>Failed Uploads: {bulkResult.failedUploads}</div>
+              )}
+              {bulkResult.uploadErrors && bulkResult.uploadErrors.length > 0 && (
                 <div className="mt-2">
-                  <div className="font-semibold">Errors:</div>
+                  <div className="font-semibold">Upload Errors:</div>
                   <ul className="list-disc list-inside text-sm text-red-700">
-                    {bulkResult.errors.map((err, idx) => (
-                      <li key={idx}>{err.course_code ? `Course ${err.course_code}: ` : ""}{err.reason}</li>
+                    {bulkResult.uploadErrors.map((err, idx) => (
+                      <li key={idx}>
+                        {err.course_code ? `Course ${err.course_code}: ` : ""}
+                        {err.reason}
+                      </li>
                     ))}
                   </ul>
                 </div>
@@ -177,95 +181,211 @@ const CourseManagementPage = () => {
           )}
         </div>
 
-        {/* --- Manual Assignment Section --- */}
-        <div className="bg-white rounded-lg shadow-md p-8 max-w-4xl mx-auto mb-8">
-          <h2 className="text-xl font-semibold mb-4">Manually Assign Course to Student</h2>
-          <form onSubmit={handleAssignCourse} className="grid grid-cols-1 gap-6">
+        {/* --- Assignment Preview Section --- */}
+        {previewAssignments.length > 0 && (
+          <div className="bg-white rounded-lg shadow-md p-8 max-w-5xl mx-auto mb-8">
+            <h2 className="text-xl font-semibold mb-4">Assignment Preview</h2>
+            <p className="mb-4">Review and edit proposed student assignments for uploaded courses.</p>
 
-            {/* Student Autocomplete */}
-            <div className="flex flex-col relative">
-              <label className="text-sm font-medium text-gray-700">Student</label>
-              <input
-                type="text"
-                value={studentQuery}
-                onChange={(e) => setStudentQuery(e.target.value)}
-                placeholder="Type student number"
-                className="mt-2 p-3 border border-gray-300 rounded-md"
-                autoComplete="off"
-              />
-              {filteredStudents.length > 0 && (
-                <ul className="absolute z-10 mt-1 bg-white border border-gray-300 rounded-md w-full max-h-60 overflow-auto shadow-lg">
-                  {filteredStudents.map((s) => (
-                    <li
-                      key={s._id}
-                      className="p-2 hover:bg-gray-200 cursor-pointer"
-                      onClick={() => {
-                        setStudentData({ ...studentData, student_id: s._id });
-                        setStudentQuery(`${s.student_number}`);
-                        setFilteredStudents([]);
-                      }}
-                    >
-                      {s.student_number} 
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
+            {previewAssignments.map((pa) => (
+              <div key={pa.course_id} className="mb-6">
+                <h3 className="text-lg font-medium mb-2">Course: {pa.course_code}</h3>
+                <div className="mb-2 text-sm text-gray-600">
+                  <span>Extracted Semester: {pa.extracted_semester || "N/A"}</span> | 
+                  <span className="ml-2">Department: {pa.department}</span> | 
+                  <span className={`ml-2 ${pa.is_theory ? 'text-green-600' : 'text-blue-600'}`}>
+                    Type: {pa.is_theory ? 'Theory' : 'Lab'}
+                  </span>
+                </div>
+                <table className="min-w-full border border-gray-300">
+                  <thead className="bg-gray-100">
+                    <tr>
+                      <th className="py-2 px-3 border">Select</th>
+                      <th className="py-2 px-3 border">Student Number</th>
+                      <th className="py-2 px-3 border">Name</th>
+                      <th className="py-2 px-3 border">Email</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {pa.proposed_students && pa.proposed_students.length > 0 ? (
+                      pa.proposed_students.map((student) => (
+                        <tr key={student.student_id} className="hover:bg-gray-50">
+                          <td className="py-2 px-3 border">
+                            <input
+                              type="checkbox"
+                              checked={editedAssignments[pa.course_id]?.includes(student.student_id)}
+                              onChange={(e) => {
+                                const updated = [...(editedAssignments[pa.course_id] || [])];
+                                if (e.target.checked) {
+                                  updated.push(student.student_id);
+                                } else {
+                                  const idx = updated.indexOf(student.student_id);
+                                  if (idx > -1) updated.splice(idx, 1);
+                                }
+                                setEditedAssignments({ ...editedAssignments, [pa.course_id]: updated });
+                              }}
+                            />
+                          </td>
+                          <td className="py-2 px-3 border">{student.student_number}</td>
+                          <td className="py-2 px-3 border">{student.name}</td>
+                          <td className="py-2 px-3 border">{student.email || "N/A"}</td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan="4" className="text-center text-gray-500 py-4">
+                          No students proposed for this course.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            ))}
 
-
-
-            {/* Course Autocomplete */}
-            <div className="flex flex-col relative">
-              <label className="text-sm font-medium text-gray-700">Course</label>
-              <input
-                type="text"
-                value={courseQuery}
-                onChange={(e) => setCourseQuery(e.target.value)}
-                placeholder="Type course code or name"
-                className="mt-2 p-3 border border-gray-300 rounded-md"
-                autoComplete="off"
-              />
-              {filteredCourses.length > 0 && (
-                <ul className="absolute z-10 mt-1 bg-white border border-gray-300 rounded-md w-full max-h-60 overflow-auto shadow-lg">
-                  {filteredCourses.map((c) => (
-                    <li
-                      key={c._id}
-                      className="p-2 hover:bg-gray-200 cursor-pointer"
-                      onClick={() => {
-                        setStudentData({ ...studentData, course_id: c._id });
-                        setCourseQuery(`${c.course_code} - ${c.course_name}`);
-                        setFilteredCourses([]);
-                      }}
-                    >
-                      {c.course_code} - {c.course_name}
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-
-            <div className="text-right mt-4">
+            <div className="flex justify-end mt-4">
               <button
-                type="submit"
-                className={`bg-green-600 text-white py-3 px-6 rounded-lg hover:bg-green-700 ${loading ? "opacity-50 cursor-not-allowed" : ""}`}
-                disabled={loading}
+                onClick={() => {
+                  setPreviewAssignments([]);
+                  setEditedAssignments({});
+                  setConfirmResult(null);
+                }}
+                className="bg-gray-500 text-white px-4 py-2 rounded mr-2 hover:bg-gray-600"
+                disabled={confirming}
               >
-                {loading ? "Assigning..." : "Assign Course"}
+                Cancel Preview
+              </button>
+              <button
+                onClick={async () => {
+                  setConfirming(true);
+                  setConfirmResult(null);
+                  try {
+                    const token = localStorage.getItem("token");
+                    const assignments = Object.entries(editedAssignments).map(([course_id, assigned_students]) => ({
+                      course_id,
+                      assigned_students,
+                    }));
+                    const res = await axios.post(
+                      "http://localhost:8080/api/admin/confirm-assignments", // Corrected URL
+                      { assignments },
+                      { headers: { Authorization: `Bearer ${token}` } }
+                    );
+                    if (res.status === 200) {
+                      setConfirmResult(res.data);
+                      setPreviewAssignments([]);
+                      setEditedAssignments({});
+                    }
+                  } catch (err) {
+                    console.error("Confirmation error:", err); // Debug log
+                    if (err.response?.status === 404) {
+                      setConfirmResult({
+                        message: "Assignment confirmation unavailable (404). Please verify server routes.",
+                        errors: [{ reason: "Route not found. Check backend configuration." }],
+                      });
+                    } else {
+                      setConfirmResult({
+                        message: "Assignment confirmation failed",
+                        errors: [{ reason: err.response?.data?.message || err.message }],
+                      });
+                    }
+                  }
+                  setConfirming(false);
+                }}
+                disabled={confirming}
+                className={`bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 ${
+                  confirming ? "opacity-50 cursor-not-allowed" : ""
+                }`}
+              >
+                {confirming ? "Confirming..." : "Confirm Assignments"}
               </button>
             </div>
-          </form>
-        </div>
 
-        {/* --- Auto Assignment Section --- */}
-        <div className="bg-white rounded-lg shadow-md p-8 max-w-4xl mx-auto">
-          <h2 className="text-xl font-semibold mb-4">Auto Assign Courses</h2>
-          <button
-            onClick={handleAutoAssign}
-            className={`bg-blue-600 text-white py-3 px-6 rounded-lg hover:bg-blue-700 ${loading ? "opacity-50 cursor-not-allowed" : ""}`}
-            disabled={loading}
-          >
-            {loading ? "Assigning..." : "Auto Assign Courses"}
-          </button>
+            {confirmResult && (
+              <div className="mt-4 p-4 border rounded bg-gray-50">
+                <div className="font-bold">{confirmResult.message}</div>
+                {confirmResult.created !== undefined && <div>Assignments Created: {confirmResult.created}</div>}
+                {confirmResult.skipped !== undefined && (
+                  <div>Assignments Skipped (Duplicates): {confirmResult.skipped}</div>
+                )}
+                {confirmResult.failedCount !== undefined && <div>Failed Assignments: {confirmResult.failedCount}</div>}
+                {confirmResult.errors && confirmResult.errors.length > 0 && (
+                  <div className="mt-2">
+                    <div className="font-semibold">Assignment Errors:</div>
+                    <ul className="list-disc list-inside text-sm text-red-700">
+                      {confirmResult.errors.map((err, idx) => (
+                        <li key={idx}>
+                          {err.course_id ? `Course ${err.course_id} (Student ${err.student_id || "N/A"}): ` : ""}
+                          {err.reason}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* --- Courses Table --- */}
+        <div className="bg-white rounded-lg shadow-md p-8 max-w-5xl mx-auto">
+          <h2 className="text-xl font-semibold mb-4">All Courses</h2>
+          <div className="mb-4">
+            <button
+              onClick={() => {
+                const selectedCourseIds = courses.map(c => c._id); // Select all courses
+                generatePreviewForCourses(selectedCourseIds);
+              }}
+              className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+              disabled={courses.length === 0}
+            >
+              Generate Preview for All Courses
+            </button>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="min-w-full border border-gray-300">
+              <thead className="bg-gray-100">
+                <tr>
+                  <th className="py-2 px-3 border">Course Code</th>
+                  <th className="py-2 px-3 border">Course Name</th>
+                  <th className="py-2 px-3 border">Department</th>
+                  <th className="py-2 px-3 border">Credit</th>
+                  <th className="py-2 px-3 border">Semester</th>
+                  <th className="py-2 px-3 border">Academic Year</th>
+                  <th className="py-2 px-3 border">Students Count</th>
+                </tr>
+              </thead>
+              <tbody>
+                {Array.isArray(courses) && courses.length > 0 ? (
+                  courses.map((c) => {
+                    const deptCounts = getDeptCountForCourse(c.course_code);
+                    return (
+                      <tr key={c._id} className="hover:bg-gray-50">
+                        <td className="py-2 px-3 border font-mono">{c.course_code}</td>
+                        <td className="py-2 px-3 border">{c.course_name}</td>
+                        <td className="py-2 px-3 border">{c.department}</td>
+                        <td className="py-2 px-3 border">{c.credit}</td>
+                        <td className="py-2 px-3 border">{c.semester}</td>
+                        <td className="py-2 px-3 border">{c.academic_year}</td>
+                        <td className="py-2 px-3 border">
+                          {Object.entries(deptCounts).map(([dept, count]) => (
+                            <div key={dept}>
+                              {dept}: {count}
+                            </div>
+                          ))}
+                        </td>
+                      </tr>
+                    );
+                  })
+                ) : (
+                  <tr>
+                    <td colSpan="7" className="text-center text-gray-500 py-4">
+                      No courses found.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>
