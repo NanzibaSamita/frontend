@@ -11,6 +11,8 @@ export default function SupervisorPage() {
   const [pageLoading, setPageLoading] = useState(true);
   const [eligible, setEligible] = useState(false);
   const [pageState, setPageState] = useState("loading"); // loading, not_assigned, pending, assigned
+  const [selectValue, setSelectValue] = useState("");
+
 
   // Fetch all data and determine page state
   useEffect(() => {
@@ -168,21 +170,23 @@ export default function SupervisorPage() {
               <h3 className="text-gray-800 text-lg font-semibold mb-4">Select Supervisors (Priority Order)</h3>
               <div className="flex items-center gap-4">
                 <select
+                  value={selectValue}
                   onChange={handleSupervisorSelect}
                   className="w-[400px] py-2 px-4 bg-gray-50 border border-gray-300 rounded-md text-black"
-                  defaultValue=""
                   disabled={!eligible}
                 >
                   <option value="" disabled>
                     Select Supervisor
                   </option>
                   {supervisors.length === 0 ? (
-                    <option value="" disabled>
-                      No supervisors available
-                    </option>
+                    <option value="" disabled>No supervisors available</option>
                   ) : (
                     supervisors.map((sup) => (
-                      <option key={sup._id} value={sup._id} disabled={selectedSupervisors.includes(sup._id)}>
+                      <option
+                        key={sup._id}
+                        value={sup._id}
+                        disabled={selectedSupervisors.includes(sup._id)}
+                      >
                         {sup.user_id
                           ? `${sup.user_id.first_name || 'N/A'} ${sup.user_id.last_name || 'N/A'} - ${sup.designation || 'N/A'}`
                           : 'Unknown Supervisor'} ({sup.current_supervision_count || 0}/{sup.max_supervision_capacity || 0})
@@ -190,7 +194,6 @@ export default function SupervisorPage() {
                     ))
                   )}
                 </select>
-
                 <button
                   onClick={handleSubmit}
                   disabled={loading || !eligible || selectedSupervisors.length === 0}
@@ -208,7 +211,7 @@ export default function SupervisorPage() {
             {/* Selected supervisors list */}
             {selectedSupervisors.length > 0 && (
               <div className="mb-6">
-                <h4 className="font-semibold mb-3">Selected Priority List:</h4>
+                <h4 className="text-gray-800 font-semibold mb-3">Selected Priority List:</h4>
                 <div className="space-y-2">
                   {selectedSupervisors.map((id, idx) => {
                     const sup = supervisors.find((s) => s._id === id);
