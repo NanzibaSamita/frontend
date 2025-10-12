@@ -15,6 +15,9 @@ export default function SupervisionRequests() {
   const [error, setError] = useState("");
   const [openPendingFor, setOpenPendingFor] = useState(null);
   const [openAssignedFor, setOpenAssignedFor] = useState(null);
+  const [pgcManual, setPgcManual] = useState([]);
+  const [openManualFor, setOpenManualFor] = useState(null);
+
 
   const api = useMemo(() => {
     const instance = axios.create({ withCredentials: true });
@@ -152,6 +155,47 @@ export default function SupervisionRequests() {
         )}
       </Card>
 
+      {/* Manual Assign (PGC Review) */}
+      <Card title="Manual Assignment (PGC Review)" className="mb-8">
+        <Table headers={["Student", "ID", "Program", "Eligible Faculty", "Submitted on", ""]}>
+          {pgcManual.map((assignment) => {
+            const student = assignment.student_id || {};
+            const user = student.user_id || {};
+
+            return (
+              <tr key={assignment._id} className="border-t">
+                <Td>{`${user.first_name || ""} ${user.last_name || ""}`.trim() || "—"}</Td>
+                <Td>{student.student_number || "—"}</Td>
+                <Td>{student.program_id || "—"}</Td>
+                <Td>—{/* we’ll later populate eligible faculty logic here */}</Td>
+                <Td>{formatDate(assignment.createdAt)}</Td>
+                <Td className="text-right">
+                  <button
+                    onClick={() =>
+                      setOpenManualFor((cur) =>
+                        cur?._id === assignment._id ? null : assignment
+                      )
+                    }
+                    className="px-3 py-1 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded"
+                  >
+                    {openManualFor?._id === assignment._id ? "Hide" : "View"}
+                  </button>
+                </Td>
+              </tr>
+            );
+          })}
+        </Table>
+
+        {openManualFor && (
+          <DetailDropDown
+            assignment={openManualFor}
+            showActions={true}
+            onComment={() => handleComment(openManualFor)}
+            onApprove={() => handleApprove(openManualFor)}
+            onReject={() => handleReject(openManualFor)}
+          />
+        )}
+      </Card>
       {/* Assigned Supervisors */}
       <Card title="Assigned Supervisors">
         <Table headers={["Student", "ID", "Program", "Supervisor", "Submitted on", ""]}>
