@@ -4,61 +4,64 @@ import { useMemo, useState, useEffect, useCallback } from "react";
 import axios from "axios";
 
 /* -------------------- API endpoints -------------------- */
-const PGC_PENDING_URL = "http://localhost:8080/api/pgc/supervision-requests";
-const PGC_RESPOND_URL = "http://localhost:8080/api/pgc/pgc-respond";
-const PGC_ASSIGNED_URL = "http://localhost:8080/api/pgc/assigned-supervisors";
+const API_ENDPOINTS = {
+  PENDING: "http://localhost:8080/api/pgc/supervision-requests",
+  ASSIGNED: "http://localhost:8080/api/pgc/assigned-supervisors",
+  MANUAL: "http://localhost:8080/api/pgc/manual-assignments-with-supervisors",
+  RESPOND: "http://localhost:8080/api/pgc/pgc-respond",
+  ASSIGN_SUPERVISOR: "http://localhost:8080/api/pgc/assign-supervisor",
+};
 
 export default function SupervisionRequests() {
-  const [pending, setPending] = useState([]);
-  const [assigned, setAssigned] = useState([]);
+  const [assignments, setAssignments] = useState({
+    pending: [],
+    assigned: [],
+    manual: [],
+  });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [openPendingFor, setOpenPendingFor] = useState(null);
-  const [openAssignedFor, setOpenAssignedFor] = useState(null);
+  const [message, setMessage] = useState(""); 
+  const [openAssignment, setOpenAssignment] = useState({
+    assignment: null,
+    type: null,
+  });
 
   const api = useMemo(() => {
     const instance = axios.create({ withCredentials: true });
     instance.interceptors.request.use((cfg) => {
-      if (typeof window !== "undefined") {
-        const token = sessionStorage.getItem("token") || localStorage.getItem("token");
-        if (token) cfg.headers.Authorization = `Bearer ${token}`;
-      }
+      const token =
+        typeof window !== "undefined"
+          ? sessionStorage.getItem("token") || localStorage.getItem("token")
+          : null;
+      if (token) cfg.headers.Authorization = `Bearer ${token}`;
       return cfg;
     });
     return instance;
   }, []);
 
-  const formatDate = (iso) => {
-    if (!iso) return "—";
-    const d = new Date(iso);
-    return d.toLocaleDateString("en-GB"); // dd/mm/yyyy
-  };
+  const formatDate = (iso) =>
+    iso ? new Date(iso).toLocaleDateString("en-GB") : "—";
 
+  /* -------------------- Load All Data -------------------- */
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
       setError("");
+      setMessage("");
 
-      if (
-        typeof window !== "undefined" &&
-        !sessionStorage.getItem("token") &&
-        !localStorage.getItem("token")
-      ) {
-        setError("Not authenticated. Please log in first.");
-        setLoading(false);
-        return;
-      }
-
-      const [pendingRes, assignedRes] = await Promise.all([
-        api.get(PGC_PENDING_URL),
-        api.get(PGC_ASSIGNED_URL),
+      const [pendingRes, assignedRes, manualRes] = await Promise.all([
+        api.get(API_ENDPOINTS.PENDING).catch(() => ({ data: { assignments: [] } })),
+        api.get(API_ENDPOINTS.ASSIGNED).catch(() => ({ data: { assignments: [] } })),
+        api.get(API_ENDPOINTS.MANUAL).catch(() => ({ data: { assignments: [] } })),
       ]);
 
-      setPending(pendingRes?.data?.assignments ?? []);
-      setAssigned(assignedRes?.data?.assignments ?? []);
+      setAssignments({
+        pending: pendingRes.data.assignments || [],
+        assigned: assignedRes.data.assignments || [],
+        manual: manualRes.data.assignments || [],
+      });
     } catch (e) {
-      const msg = e?.response?.data?.message || e.message;
-      setError(`Failed to load: ${msg}`);
+      setError(`Failed to load data: ${e.message}`);
       console.error(e);
     } finally {
       setLoading(false);
@@ -69,241 +72,206 @@ export default function SupervisionRequests() {
     loadData();
   }, [loadData]);
 
-  const pgcRespond = async (assignmentId, response) => {
+  /* -------------------- Manual Supervisor Assignment -------------------- */
+  const handleManualAssign = async (studentId, supervisorId) => {
     try {
-      setError("");
-      await api.post(PGC_RESPOND_URL, { assignmentId, response });
+      await api.post(API_ENDPOINTS.ASSIGN_SUPERVISOR, { studentId, supervisorId });
+      setMessage("Supervisor assigned successfully!");
+      setOpenAssignment({ assignment: null, type: null });
       await loadData();
+
+      // Automatically clear message after 5 seconds
+      setTimeout(() => setMessage(""), 5000);
     } catch (e) {
-      const msg = e?.response?.data?.message || e.message;
-      setError(`Action failed: ${msg}`);
-      console.error(e);
+      setError(e.response?.data?.message || "Failed to assign supervisor");
+      setTimeout(() => setError(""), 5000);
     }
   };
 
-  const handleApprove = (assignment) => pgcRespond(assignment._id, "Accepted");
-  const handleReject = (assignment) => pgcRespond(assignment._id, "Rejected");
-  const handleComment = (assignment) => {
-    const studentName = assignment.student_id?.user_id?.first_name || "student";
-    alert(`Comment functionality for ${studentName}`);
-  };
-
-  const getCurrentFaculty = (assignment) => {
-    if (!assignment.priority_list || !assignment.priority_list.length) return {};
-    const currentIndex = assignment.current_priority_index || 0;
-    const faculty = assignment.priority_list[currentIndex]?.faculty_id || {};
-    const user = faculty?.user_id || {};
-    return { ...faculty, user_id: user };
-  };
-
   const getFacultyName = (faculty) => {
-    if (!faculty) return "—";
-    const user = faculty.user_id || {};
-    return `${user.first_name || ""} ${user.last_name || ""}`.trim() || "—";
+    if (!faculty?.user_id) return "—";
+    return `${faculty.user_id.first_name || ""} ${faculty.user_id.last_name || ""}`.trim() || "—";
   };
 
   if (loading) return <div className="p-10">Loading…</div>;
-  if (error) return <div className="p-10 text-red-600">{error}</div>;
 
   return (
-    <div className="w-full p-6">
+    <div className="w-full p-4 sm:p-6 md:p-8">
       <h1 className="text-2xl font-semibold mb-6">Supervisor Approval</h1>
 
+      {/* Inline success/error message display */}
+      {message && (
+        <div className="mb-4 p-3 rounded bg-green-100 text-green-800 border border-green-300">
+          {message}
+        </div>
+      )}
+      {error && (
+        <div className="mb-4 p-3 rounded bg-red-100 text-red-800 border border-red-300">
+          {error}
+        </div>
+      )}
+
       {/* Pending Supervisor Approval */}
-      <Card title="Pending Supervisor Approval" className="mb-8">
-        <Table headers={["Student", "ID", "Program", "Supervisor Interested", "Submitted on", ""]}>
-          {pending.map((assignment) => {
-            const student = assignment.student_id || {};
-            const user = student.user_id || {};
-            const faculty = getCurrentFaculty(assignment);
+      <Card title="Pending Supervisor Approval" className="mb-6 md:mb-8">
+        <AssignmentTable
+          headers={["Student", "ID", "Program", "Supervisor Interested", "Submitted on", ""]}
+          assignments={assignments.pending}
+          getFaculty={(a) => a.priority_list?.[a.current_priority_index || 0]?.faculty_id}
+          openAssignment={openAssignment}
+          onToggle={(assignment) =>
+            setOpenAssignment({
+              assignment: openAssignment.assignment?._id === assignment._id ? null : assignment,
+              type: "pending",
+            })
+          }
+          formatDate={formatDate}
+          getFacultyName={getFacultyName}
+        />
+      </Card>
 
-            return (
-              <tr key={assignment._id} className="border-t">
-                <Td>{`${user.first_name || ""} ${user.last_name || ""}`.trim() || "—"}</Td>
-                <Td>{student.student_number || "—"}</Td>
-                <Td>{student.program_id || "—"}</Td>
-                <Td>{getFacultyName(faculty)}</Td>
-                <Td>{formatDate(assignment.createdAt)}</Td>
-                <Td className="text-right">
-                  <button
-                    onClick={() =>
-                      setOpenPendingFor((cur) =>
-                        cur?._id === assignment._id ? null : assignment
-                      )
-                    }
-                    className="px-3 py-1 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded"
-                  >
-                    {openPendingFor?._id === assignment._id ? "Hide" : "View"}
-                  </button>
-                </Td>
-              </tr>
-            );
-          })}
-        </Table>
+      {/* Manual Assignment (PGC Review) */}
+      <Card title="Manual Assignment (PGC Review)" className="mb-6 md:mb-8">
+        <AssignmentTable
+          headers={["Student", "ID", "Program", "Eligible Faculty", "Submitted on", ""]}
+          assignments={assignments.manual}
+          getFaculty={() => null}
+          openAssignment={openAssignment}
+          onToggle={(assignment) =>
+            setOpenAssignment({
+              assignment: openAssignment.assignment?._id === assignment._id ? null : assignment,
+              type: "manual",
+            })
+          }
+          formatDate={formatDate}
+          getFacultyName={() => "Click to view"}
+        />
 
-        {openPendingFor && (
+        {openAssignment.type === "manual" && openAssignment.assignment && (
           <DetailDropDown
-            assignment={openPendingFor}
-            showActions={true}
-            onComment={() => handleComment(openPendingFor)}
-            onApprove={() => handleApprove(openPendingFor)}
-            onReject={() => handleReject(openPendingFor)}
+            assignment={openAssignment.assignment}
+            onAssign={(facultyId) =>
+              handleManualAssign(openAssignment.assignment.student_id._id, facultyId)
+            }
           />
         )}
       </Card>
 
       {/* Assigned Supervisors */}
       <Card title="Assigned Supervisors">
-        <Table headers={["Student", "ID", "Program", "Supervisor", "Submitted on", ""]}>
-          {assigned.map((assignment) => {
-            const student = assignment.student_id || {};
-            const user = student.user_id || {};
-            const faculty = assignment.accepted_faculty || {};
-            const facultyUser = faculty.user_id || {};
-
-            return (
-              <tr key={assignment._id} className="border-t">
-                <Td>{`${user.first_name || ""} ${user.last_name || ""}`.trim() || "—"}</Td>
-                <Td>{student.student_number || "—"}</Td>
-                <Td>{student.program_id || "—"}</Td>
-                <Td>{`${facultyUser.first_name || ""} ${facultyUser.last_name || ""}`.trim() || "—"}</Td>
-                <Td>{formatDate(assignment.createdAt)}</Td>
-                <Td className="text-right">
-                  <button
-                    onClick={() =>
-                      setOpenAssignedFor((cur) =>
-                        cur?._id === assignment._id ? null : assignment
-                      )
-                    }
-                    className="px-3 py-1 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded"
-                  >
-                    {openAssignedFor?._id === assignment._id ? "Hide" : "View"}
-                  </button>
-                </Td>
-              </tr>
-            );
-          })}
-        </Table>
-
-        {openAssignedFor && (
-          <DetailDropDown assignment={openAssignedFor} showActions={false} />
-        )}
+        <AssignmentTable
+          headers={["Student", "ID", "Program", "Supervisor", "Submitted on", ""]}
+          assignments={assignments.assigned}
+          getFaculty={(a) => a.accepted_faculty}
+          openAssignment={openAssignment}
+          onToggle={(assignment) =>
+            setOpenAssignment({
+              assignment: openAssignment.assignment?._id === assignment._id ? null : assignment,
+              type: "assigned",
+            })
+          }
+          formatDate={formatDate}
+          getFacultyName={getFacultyName}
+        />
       </Card>
     </div>
   );
 }
 
-/* -------------------- Drop-down details -------------------- */
-function DetailDropDown({ assignment, showActions = true, onComment, onApprove, onReject }) {
+/* -------------------- Components -------------------- */
+function AssignmentTable({ headers, assignments, getFaculty, openAssignment, onToggle, formatDate, getFacultyName }) {
+  return (
+    <Table headers={headers}>
+      {assignments.map((assignment) => {
+        const student = assignment.student_id || {};
+        const user = student.user_id || {};
+        const program = student.program_id || {};
+        const faculty = getFaculty(assignment);
+
+        return (
+          <tr key={assignment._id} className="border-t hover:bg-gray-50 transition duration-150 ease-in-out">
+            <Td>{`${user.first_name || ""} ${user.last_name || ""}`.trim() || "—"}</Td>
+            <Td>{student.student_number || "—"}</Td>
+            <Td>{program.program_name || "—"}</Td>
+            <Td>{getFacultyName(faculty || assignment)}</Td>
+            <Td>{formatDate(assignment.createdAt)}</Td>
+            <Td className="text-right">
+              <button
+                onClick={() => onToggle(assignment)}
+                className="px-3 py-1 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded transition duration-150 ease-in-out"
+              >
+                {openAssignment.assignment?._id === assignment._id ? "Hide" : "View"}
+              </button>
+            </Td>
+          </tr>
+        );
+      })}
+    </Table>
+  );
+}
+
+function DetailDropDown({ assignment, onAssign }) {
   const student = assignment.student_id || {};
   const user = student.user_id || {};
-
-  // pick faculty depending on assignment status
-  let faculty = {};
-  if (assignment.overall_status === "Assigned") {
-    faculty = assignment.accepted_faculty || {};
-  } else {
-    faculty = assignment.priority_list?.[assignment.current_priority_index || 0]?.faculty_id || {};
-  }
-  const facultyUser = faculty.user_id || {};
-
+  const program = student.program_id || {};
   const studentName = `${user.first_name || ""} ${user.last_name || ""}`.trim() || "—";
-  const facultyName = `${facultyUser.first_name || ""} ${facultyUser.last_name || ""}`.trim() || "—";
 
   const studentInfo = {
     Name: studentName,
     ID: student.student_number || "—",
-    Program: student.program_id || "—",
-    "Admission Year": student.admission_year || "—",
-    "Current Semester": student.current_semester || "—",
+    Program: program.program_name || "—",
     CGPA: student.cgpa || "—",
-    "Credits (Completed/Total)": `${student.obtained_credits || 0}/${student.total_credit_hours || 0}`,
-    "Research Area": student.research_area || "—",
-    Status: student.status || "—",
+    Credits: `${student.obtained_credits || 0}/${student.total_credit_hours || 0}`,
+    Department: user.department || "—",
     Contact: user.email || "—",
   };
 
-  const supervisorInfo = {
-    Name: facultyName,
-    ID: faculty.employee_id || "—",
-    Department: facultyUser.department || "—",
-    Domain: faculty.research_interests || "—",
-    "Students Supervised": `${faculty.current_supervision_count || 0}/${faculty.max_supervision_capacity || 0}`,
-    Contact: facultyUser.email || "—",
-  };
-
-  const summary = {
-    student: studentName,
-    id: student.student_number || "—",
-    program: student.program_id || "—",
-    sup: facultyName,
-    date: new Date(assignment.createdAt).toLocaleDateString("en-GB") || "—",
-  };
-
   return (
-    <div className="mt-6 border rounded bg-white">
-      {/* Summary Table */}
-      <div className="rounded border m-4 overflow-hidden">
-        <table className="w-full text-xs">
-          <thead className="bg-gray-50">
-            <tr>
-              <Th>Student</Th>
-              <Th>ID</Th>
-              <Th>Program</Th>
-              <Th>Supervisor</Th>
-              <Th>Submitted on</Th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr className="border-t">
-              <Td>{summary.student}</Td>
-              <Td>{summary.id}</Td>
-              <Td>{summary.program}</Td>
-              <Td>{summary.sup}</Td>
-              <Td>{summary.date}</Td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      {/* Two-column info */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4">
-        <InfoCard title="Student Information">
+    <div className="mt-6 border rounded-lg bg-white shadow-sm">
+      <div className="p-4">
+        <InfoCard title="Student Information" className="mb-4">
           {Object.entries(studentInfo).map(([k, v]) => (
             <InfoRow key={k} label={k} value={v} />
           ))}
         </InfoCard>
-
-        <InfoCard title="Supervisor Information">
-          {Object.entries(supervisorInfo).map(([k, v]) => (
-            <InfoRow key={k} label={k} value={v} />
-          ))}
-        </InfoCard>
       </div>
 
-      {/* Actions */}
-      {showActions && (
-        <div className="flex gap-3 px-4 pb-4">
-          <button
-            onClick={onComment}
-            className="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded"
-          >
-            Comment
-          </button>
-          <button
-            onClick={onApprove}
-            className="px-4 py-2 text-sm bg-green-600 hover:bg-green-700 text-white rounded"
-          >
-            Approve
-          </button>
-          <button
-            onClick={onReject}
-            className="px-4 py-2 text-sm bg-red-600 hover:bg-red-700 text-white rounded"
-          >
-            Reject
-          </button>
+      <div className="p-4 pt-0">
+        <h3 className="text-lg font-semibold mb-3">Available Supervisors</h3>
+        <div className="max-h-96 overflow-y-auto space-y-4">
+          {assignment.available_supervisors?.length ? (
+            assignment.available_supervisors.map((faculty) => (
+              <InfoCard
+                key={faculty._id}
+                title={`${faculty.user_id?.first_name || ""} ${faculty.user_id?.last_name || ""}`}
+                className="mb-0"
+              >
+                <InfoRow label="ID" value={faculty.employee_id || "—"} />
+                <InfoRow label="Department" value={faculty.user_id?.department || "—"} />
+                <InfoRow label="Domain" value={faculty.research_interests || "—"} />
+                <InfoRow
+                  label="Supervision Load"
+                  value={`${faculty.current_supervision_count || 0}/${faculty.max_supervision_capacity || 0}`}
+                />
+                <InfoRow label="Contact" value={faculty.user_id?.email || "—"} />
+
+                {/* ✅ Fixed: valid table structure */}
+                <tr>
+                  <td colSpan="2" className="pt-3">
+                    <button
+                      onClick={() => onAssign(faculty._id)}
+                      className="px-4 py-2 text-sm bg-green-600 hover:bg-green-700 text-white rounded transition duration-150 ease-in-out"
+                    >
+                      Assign this Supervisor
+                    </button>
+                  </td>
+                </tr>
+              </InfoCard>
+            ))
+          ) : (
+            <p className="text-gray-600">No eligible supervisors available.</p>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 }
@@ -311,7 +279,7 @@ function DetailDropDown({ assignment, showActions = true, onComment, onApprove, 
 /* -------------------- UI Helpers -------------------- */
 function Card({ title, className = "", children }) {
   return (
-    <div className={`bg-white rounded shadow-sm border ${className}`}>
+    <div className={`bg-white rounded-lg shadow-md border ${className}`}>
       <div className="px-5 py-4 border-b font-semibold">{title}</div>
       <div>{children}</div>
     </div>
@@ -325,7 +293,7 @@ function Table({ headers, children }) {
         <thead>
           <tr className="bg-gray-50 text-gray-700">
             {headers.map((h, i) => (
-              <th key={i} className="text-left font-medium px-5 py-3">
+              <th key={i} className="text-left font-medium px-3 sm:px-5 py-3">
                 {h}
               </th>
             ))}
@@ -337,16 +305,13 @@ function Table({ headers, children }) {
   );
 }
 
-function Th({ children }) {
-  return <th className="text-left px-3 py-2">{children}</th>;
-}
 function Td({ className = "", children }) {
-  return <td className={`px-5 py-3 align-top ${className}`}>{children}</td>;
+  return <td className={`px-3 sm:px-5 py-3 align-top ${className}`}>{children}</td>;
 }
 
-function InfoCard({ title, children }) {
+function InfoCard({ title, className = "", children }) {
   return (
-    <div className="rounded border">
+    <div className={`rounded-lg border bg-white ${className}`}>
       <div className="bg-gray-50 px-3 py-2 text-sm font-medium">{title}</div>
       <table className="w-full text-sm">
         <tbody>{children}</tbody>
@@ -358,7 +323,7 @@ function InfoCard({ title, children }) {
 function InfoRow({ label, value }) {
   return (
     <tr className="border-t">
-      <td className="w-40 sm:w-48 text-gray-600 px-3 py-2">{label}</td>
+      <td className="w-32 sm:w-40 md:w-48 text-gray-600 px-3 py-2">{label}</td>
       <td className="px-3 py-2">{value || "—"}</td>
     </tr>
   );
