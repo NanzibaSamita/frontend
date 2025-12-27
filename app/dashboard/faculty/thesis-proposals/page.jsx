@@ -74,14 +74,7 @@ export default function ThesisProposalApprovalsPage() {
           />
         )}
 
-        {selectedProposal && (
-          <div className="mt-8">
-            <ThesisProposalDetails
-              proposal={selectedProposal}
-              onReview={handleReview}
-            />
-          </div>
-        )}
+      
       </div>
     </div>
   );

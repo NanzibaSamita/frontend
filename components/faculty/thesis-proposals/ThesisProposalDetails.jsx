@@ -69,21 +69,26 @@ export default function ThesisProposalDetails({ proposal, onReview }) {
       </div>
 
       <div className="mt-2 flex gap-4">
-        <button
-          onClick={() => handleAction("Approved")}
-          className="bg-green-600 text-white px-4 py-2 rounded flex items-center gap-2 hover:bg-green-700"
-        >
-          <CheckCircle size={16} />
-          Approve
-        </button>
-        <button
-          onClick={() => handleAction("Rejected")}
-          className="bg-red-600 text-white px-4 py-2 rounded flex items-center gap-2 hover:bg-red-700"
-        >
-          <XCircle size={16} />
-          Reject
-        </button>
-      </div>
+  {proposal.status === "RevisionRequested" && (
+    <>
+      <button
+        onClick={() => handleAction("Approved")}
+        className="bg-green-600 text-white px-4 py-2 rounded flex items-center gap-2 hover:bg-green-700"
+      >
+        <CheckCircle size={16} />
+        Approve
+      </button>
+      <button
+        onClick={() => handleAction("Rejected")}
+        className="bg-red-600 text-white px-4 py-2 rounded flex items-center gap-2 hover:bg-red-700"
+      >
+        <XCircle size={16} />
+        Reject
+      </button>
+    </>
+  )}
+</div>
+
     </div>
   );
 }

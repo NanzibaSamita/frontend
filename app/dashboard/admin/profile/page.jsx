@@ -7,87 +7,72 @@ export default function AdminProfilePage() {
   const [user, setUser] = useState(null);
 
   useEffect(() => {
-    // 1. Get token
     const token = localStorage.getItem("token");
     if (!token) return;
 
-    // 2. Decode it
     const decoded = jwtDecode(token);
-    console.log(decoded)
-    // 3. Simulate fetching user info from token (or optional API call)
-    // NOTE: This assumes your token includes `email`, `role`, etc.
     setUser({
-      first_name: decoded.first_name, // Assuming field exists
-      last_name: decoded.last_name,
-
-      employeeId: decoded.user_id,
-      email: decoded.email,
-      role: decoded.role,
-      department: decoded.department,
+      first_name: decoded.first_name || "System",
+      last_name: decoded.last_name || "Admin",
+      email: decoded.email || "ayeshamashi01@gmail.com",
+      role: decoded.role || "Admin",
+      department: decoded.department || "Administration",
     });
   }, []);
-  console.log(user);
+
   if (!user) {
     return (
-      <div className="flex h-screen items-center justify-center text-xl">
+      <div className="flex h-screen items-center justify-center text-xl text-gray-600">
         Loading profile...
       </div>
     );
   }
 
   return (
-    <div className="flex h-screen ">
-      
-
-      <main className="flex-1 p-10">
-        <h1 className="text-3xl font-bold mb-8">Profile</h1>
-
-        <div className="bg-white shadow-md rounded-md w-full max-w-4xl">
-          <div className="border-b px-10 py-6">
-            <div className="flex justify-between text-lg">
-              <span className="font-semibold">Full Name:</span>
-              <span>
-                {user.first_name} {user.last_name}{" "}
-              </span>
+    <div className="flex min-h-screen bg-gray-100">
+      <main className="flex-1 p-2 sm:p-4">
+        <div className="w-full max-w-screen-lg mx-auto bg-white shadow-md rounded-lg p-3 sm:p-4 md:p-6">
+          {/* Profile Header with Avatar */}
+          <div className="flex items-center mb-3 sm:mb-4">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 rounded-full bg-gray-200 flex items-center justify-center text-gray-500 text-base sm:text-lg md:text-xl font-semibold mr-2 sm:mr-3">
+              {user.first_name[0]}{user.last_name[0]}
+            </div>
+            <div>
+              <h2 className="text-lg sm:text-xl md:text-2xl font-semibold text-gray-800">
+                {user.first_name} {user.last_name}
+              </h2>
             </div>
           </div>
 
-          {/* <div className="border-b px-10 py-6">
-            <div className="flex justify-between text-lg">
-              <span className="font-semibold">Employee ID:</span>
-              <span>{user.employeeId}</span>
+          {/* Profile Details */}
+          <div className="space-y-2 sm:space-y-3">
+            <div className="flex justify-between items-center border-b border-gray-200 py-1 sm:py-2">
+              <span className="font-semibold text-gray-600 text-sm sm:text-base">Full Name:</span>
+              <span className="text-gray-800 text-sm sm:text-base">{user.first_name} {user.last_name}</span>
             </div>
-          </div> */}
-
-          <div className="border-b px-10 py-6">
-            <div className="flex justify-between text-lg">
-              <span className="font-semibold">Email Address:</span>
-              <span>{user.email}</span>
+            <div className="flex justify-between items-center border-b border-gray-200 py-1 sm:py-2">
+              <span className="font-semibold text-gray-600 text-sm sm:text-base">Email Address:</span>
+              <span className="text-gray-800 text-sm sm:text-base">{user.email}</span>
             </div>
-          </div>
-
-          <div className="border-b px-10 py-6">
-            <div className="flex justify-between text-lg">
-              <span className="font-semibold">Role:</span>
-              <span>{user.role}</span>
+            <div className="flex justify-between items-center border-b border-gray-200 py-1 sm:py-2">
+              <span className="font-semibold text-gray-600 text-sm sm:text-base">Role:</span>
+              <span className="text-gray-800 text-sm sm:text-base">{user.role}</span>
             </div>
-          </div>
-
-          <div className="px-10 py-6">
-            <div className="flex justify-between text-lg">
-              <span className="font-semibold">Join Date:</span>
-              <span>{user.department}</span>
+            <div className="flex justify-between items-center py-1 sm:py-2">
+              <span className="font-semibold text-gray-600 text-sm sm:text-base">Department:</span>
+              <span className="text-gray-800 text-sm sm:text-base">{user.department}</span>
             </div>
           </div>
-        </div>
 
-        <div className="mt-6 flex space-x-4 px-10">
-          <button className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700">
-            Edit Profile
-          </button>
-          <button className="bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700">
-            Change Password
-          </button>
+          {/* Action Buttons */}
+          <div className="mt-3 sm:mt-4 flex flex-col sm:flex-row justify-center space-y-2 sm:space-y-0 sm:space-x-3">
+            <button className="bg-blue-600 text-white px-3 sm:px-4 py-1 sm:py-2 rounded hover:bg-blue-700 transition-colors duration-200 text-sm sm:text-base">
+              Edit Profile
+            </button>
+            <button className="bg-green-600 text-white px-3 sm:px-4 py-1 sm:py-2 rounded hover:bg-green-700 transition-colors duration-200 text-sm sm:text-base">
+              Change Password
+            </button>
+          </div>
         </div>
       </main>
     </div>

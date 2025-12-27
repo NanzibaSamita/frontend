@@ -2,6 +2,10 @@
 
 import { useState, useEffect } from "react";
 import axios from "axios";
+import { DateRange } from 'react-date-range';
+import 'react-date-range/dist/styles.css';
+import 'react-date-range/dist/theme/default.css';
+
 
 export default function ThesisPage() {
   const [status, setStatus] = useState({
@@ -28,6 +32,13 @@ export default function ThesisPage() {
   });
   const [file, setFile] = useState(null);
   const [showProposalDetails, setShowProposalDetails] = useState(false);
+  const [dateRange, setDateRange] = useState([
+    {
+      startDate: new Date(),
+      endDate: new Date(),
+      key: 'selection'
+    }
+  ]);
 
   // ✅ Fetch current thesis progress + eligibility + existing proposal
   useEffect(() => {
@@ -133,8 +144,11 @@ export default function ThesisPage() {
     try {
       const formData = new FormData();
       Object.entries(form).forEach(([key, value]) => formData.append(key, value));
+      formData.append(
+        "timeline",
+        `${dateRange[0].startDate.toISOString()} to ${dateRange[0].endDate.toISOString()}`
+      );
       if (file) formData.append("attachment", file);
-
       const res = await fetch(
         "http://localhost:8080/api/students/submit/check",
         {
@@ -425,7 +439,7 @@ export default function ThesisPage() {
       {/* Proposal Submission Form */}
       {canSubmitNewProposal() && (
         <div className="max-w-4xl mx-auto bg-white p-6 rounded-lg shadow-md mb-8">
-          <h3 className="text-xl font-semibold mb-4">
+          <h3 className="text-gray-800 text-xl font-semibold mb-4">
             {proposalData && (proposalData.status === 'Rejected' || proposalData.status === 'RevisionRequested') 
               ? "Resubmit Thesis Proposal" 
               : "Submit Thesis Proposal"}
@@ -509,27 +523,33 @@ export default function ThesisPage() {
                   Estimated Cost
                 </label>
                 <input
-                  type="text"
+                  type="number"
                   name="estimated_cost"
                   placeholder="Enter estimated cost"
                   value={form.estimated_cost}
-                  onChange={handleChange}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    if (value === "" || /^[0-9]*$/.test(value)) {
+                      setForm({ ...form, estimated_cost: value });
+                    }
+                  }}
                   className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Timeline
+                  Thesis Timeline
                 </label>
-                <input
-                  type="text"
-                  name="timeline"
-                  placeholder="Enter expected timeline"
-                  value={form.timeline}
-                  onChange={handleChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                />
+                <div className="border border-gray-300 rounded-md p-2">
+                  <DateRange
+                    ranges={dateRange}
+                    onChange={(item) => setDateRange([item.selection])}
+                    moveRangeOnFirstSelection={false}
+                    editableDateInputs={true}
+                    minDate={new Date()} // prevent selecting past dates
+                  />
+                </div>
               </div>
             </div>
 
@@ -595,7 +615,7 @@ export default function ThesisPage() {
 
       {/* Thesis Progress Timeline */}
       <div className="max-w-4xl mx-auto">
-        <h3 className="text-2xl font-semibold mb-6">Thesis Progress</h3>
+        <h3 className="text-gray-800 text-2xl font-semibold mb-6">Thesis Progress</h3>
         <div className="bg-white p-6 rounded-lg shadow-md">
           <div className="space-y-4">
             {[

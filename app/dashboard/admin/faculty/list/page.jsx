@@ -129,7 +129,6 @@ export default function AdminFacultyPage() {
                 <th className="px-4 py-3 font-semibold">Email</th>
                 <th className="px-4 py-3 font-semibold">Department</th>
                 <th className="px-4 py-3 font-semibold">Designation</th>
-                <th className="px-4 py-3 font-semibold">Current Load</th>
                 <th className="px-4 py-3 font-semibold">Max Capacity</th>
                 <th className="px-4 py-3 font-semibold"></th>
               </tr>
@@ -159,10 +158,6 @@ export default function AdminFacultyPage() {
                       <td className="px-4 py-3">{f.email || "-"}</td>
                       <td className="px-4 py-3">{f.department || "-"}</td>
                       <td className="px-4 py-3">{d.designation || "-"}</td>
-
-                      <td className="px-4 py-3">
-                        <span className="font-medium">{currentLoad}</span>
-                      </td>
 
                       <td className="px-4 py-3">
                         {facultyId ? (

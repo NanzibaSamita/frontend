@@ -11,6 +11,8 @@ export default function SupervisorPage() {
   const [pageLoading, setPageLoading] = useState(true);
   const [eligible, setEligible] = useState(false);
   const [pageState, setPageState] = useState("loading"); // loading, not_assigned, pending, assigned
+  const [selectValue, setSelectValue] = useState("");
+
 
   // Fetch all data and determine page state
   useEffect(() => {
@@ -165,25 +167,33 @@ export default function SupervisorPage() {
             )}
 
             <div className="mb-6">
-              <h3 className="text-lg font-semibold mb-4">Select Supervisors (Priority Order)</h3>
+              <h3 className="text-gray-800 text-lg font-semibold mb-4">Select Supervisors (Priority Order)</h3>
               <div className="flex items-center gap-4">
                 <select
+                  value={selectValue}
                   onChange={handleSupervisorSelect}
                   className="w-[400px] py-2 px-4 bg-gray-50 border border-gray-300 rounded-md text-black"
-                  defaultValue=""
                   disabled={!eligible}
                 >
                   <option value="" disabled>
                     Select Supervisor
                   </option>
-                  {supervisors.map((sup) => (
-                    <option key={sup._id} value={sup._id}>
-                      {sup.user_id.first_name} {sup.user_id.last_name} - {sup.designation}
-                      ({sup.current_supervision_count}/{sup.max_supervision_capacity})
-                    </option>
-                  ))}
+                  {supervisors.length === 0 ? (
+                    <option value="" disabled>No supervisors available</option>
+                  ) : (
+                    supervisors.map((sup) => (
+                      <option
+                        key={sup._id}
+                        value={sup._id}
+                        disabled={selectedSupervisors.includes(sup._id)}
+                      >
+                        {sup.user_id
+                          ? `${sup.user_id.first_name || 'N/A'} ${sup.user_id.last_name || 'N/A'} - ${sup.designation || 'N/A'}`
+                          : 'Unknown Supervisor'} ({sup.current_supervision_count || 0}/{sup.max_supervision_capacity || 0})
+                      </option>
+                    ))
+                  )}
                 </select>
-
                 <button
                   onClick={handleSubmit}
                   disabled={loading || !eligible || selectedSupervisors.length === 0}
@@ -201,7 +211,7 @@ export default function SupervisorPage() {
             {/* Selected supervisors list */}
             {selectedSupervisors.length > 0 && (
               <div className="mb-6">
-                <h4 className="font-semibold mb-3">Selected Priority List:</h4>
+                <h4 className="text-gray-800 font-semibold mb-3">Selected Priority List:</h4>
                 <div className="space-y-2">
                   {selectedSupervisors.map((id, idx) => {
                     const sup = supervisors.find((s) => s._id === id);
@@ -212,9 +222,9 @@ export default function SupervisorPage() {
                       >
                         <span>
                           <strong>Priority {idx + 1}:</strong>{" "}
-                          {sup
-                            ? `${sup.user_id.first_name} ${sup.user_id.last_name} - ${sup.designation}`
-                            : "Unknown"}
+                          {sup && sup.user_id
+                            ? `${sup.user_id.first_name || 'N/A'} ${sup.user_id.last_name || 'N/A'} - ${sup.designation || 'N/A'}`
+                            : "Unknown Supervisor"}
                         </span>
                         <button
                           className="text-red-600 hover:text-red-800 font-bold text-lg"
@@ -239,7 +249,7 @@ export default function SupervisorPage() {
             </div>
 
             <div className="mb-6">
-              <h3 className="text-xl font-semibold mb-4">Your Priority List</h3>
+              <h3 className="text-gray-800 text-xl font-semibold mb-4">Your Priority List</h3>
               <div className="space-y-3">
                 {assignment.priority_list?.map((p, idx) => {
                   const faculty = p.faculty_id;
@@ -254,14 +264,14 @@ export default function SupervisorPage() {
                     >
                       <div className="flex justify-between items-start">
                         <div>
-                          <h4 className="font-semibold">
-                            Priority {idx + 1}: {faculty?.user_id?.first_name} {faculty?.user_id?.last_name}
+                          <h4 className="text-gray-800 font-semibold">
+                            Priority {idx + 1}: {faculty?.user_id?.first_name || 'N/A'} {faculty?.user_id?.last_name || 'N/A'}
                           </h4>
                           <p className="text-sm text-gray-800 mt-1">
-                            {faculty?.designation} | {faculty?.specialization}
+                            {faculty?.designation || 'N/A'} | {faculty?.specialization || 'N/A'}
                           </p>
                           <p className="text-sm text-gray-800">
-                            Department: {faculty?.user_id?.department}
+                            Department: {faculty?.user_id?.department || 'N/A'}
                           </p>
                           {faculty?.research_interests && (
                             <p className="text-sm text-gray-700 mt-1">
@@ -292,7 +302,7 @@ export default function SupervisorPage() {
             </div>
 
             <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg">
-              <h4 className="font-semibold mb-2">What happens next?</h4>
+              <h4 className="text-gray-800 font-semibold mb-2">What happens next?</h4>
               <ol className="text-sm text-gray-700 space-y-1">
                 <li>1. Supervisor reviews and responds to your request</li>
                 <li>2. If accepted by supervisor, PGC will review and approve/reject</li>
@@ -323,7 +333,7 @@ export default function SupervisorPage() {
                     <div className="space-y-3">
                       <InfoItem 
                         label="Name" 
-                        value={`${assignment.accepted_faculty?.user_id?.first_name || ''} ${assignment.accepted_faculty?.user_id?.last_name || ''}`} 
+                        value={`${assignment.accepted_faculty?.user_id?.first_name || 'N/A'} ${assignment.accepted_faculty?.user_id?.last_name || 'N/A'}`} 
                       />
                       <InfoItem 
                         label="Designation" 
@@ -405,7 +415,7 @@ export default function SupervisorPage() {
                     >
                       <div className="flex justify-between items-center">
                         <span className="text-gray-500">
-                          <strong>Priority {idx + 1}:</strong> {faculty?.user_id?.first_name} {faculty?.user_id?.last_name}
+                          <strong>Priority {idx + 1}:</strong> {faculty?.user_id?.first_name || 'N/A'} {faculty?.user_id?.last_name || 'N/A'}
                           {isAssigned && <span className="ml-2 text-green-600 font-semibold">(Assigned)</span>}
                         </span>
                         <span className={`text-xs px-2 py-1 rounded-full ${
@@ -420,85 +430,6 @@ export default function SupervisorPage() {
                     </div>
                   );
                 })}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* State 2: Assignment pending - show priority list with status */}
-        {pageState === "pending" && assignment && (
-          <div>
-            <div className="mb-6 p-4 bg-yellow-50 border border-yellow-300 text-yellow-800 rounded-lg">
-              <strong>Status:</strong> {assignment.overall_status} - Your request is being processed
-            </div>
-
-            <div className="mb-6">
-              <h3 className="text-xl text-gray-700 font-semibold mb-4">Your Priority List</h3>
-              <div className="space-y-3">
-                {assignment.priority_list?.map((p, idx) => {
-                  const faculty = p.faculty_id;
-                  const isCurrentPriority = idx === assignment.current_priority_index;
-                  
-                  return (
-                    <div
-                      key={p._id}
-                      className={`p-4 border rounded-lg ${
-                        isCurrentPriority ? 'border-blue-500 bg-blue-50' : 'border-gray-200 bg-gray-50'
-                      }`}
-                    >
-                      <div className="flex justify-between items-start">
-                        <div className="flex-1">
-                          <h4 className="font-semibold">
-                            Priority {idx + 1}: {faculty?.user_id?.first_name} {faculty?.user_id?.last_name}
-                          </h4>
-                          <p className="text-sm text-gray-800 mt-1">
-                            {faculty?.designation} | {faculty?.specialization}
-                          </p>
-                          <p className="text-sm text-gray-800">
-                            Department: {faculty?.user_id?.department}
-                          </p>
-                          <p className="text-sm text-gray-800">
-                            Email: {faculty?.user_id?.email}
-                          </p>
-                          {faculty?.research_interests && (
-                            <p className="text-sm text-gray-700 mt-1">
-                              Research: {faculty.research_interests}
-                            </p>
-                          )}
-                          <p className="text-sm text-gray-800">
-                            Current Students: {faculty?.current_supervision_count || 0}/{faculty?.max_supervision_capacity || 0}
-                          </p>
-                        </div>
-                        <div className="text-right ml-4">
-                          <span className={`inline-block px-3 py-1 text-xs rounded-full ${
-                            p.status === 'SupervisorAccepted' ? 'bg-green-100 text-green-800' :
-                            p.status === 'Requested' ? 'bg-yellow-100 text-yellow-800' :
-                            p.status === 'SupervisorRejected' ? 'bg-red-100 text-red-800' :
-                            p.status === 'PGCAccepted' ? 'bg-green-100 text-green-800' :
-                            'bg-gray-100 text-gray-800'
-                          }`}>
-                            {p.status.replace(/([A-Z])/g, ' $1').trim()}
-                          </span>
-                          {isCurrentPriority && (
-                            <div className="text-xs text-blue-600 mt-1 font-semibold">
-                              Current Priority
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg">
-              <h4 className="font-semibold mb-2">Process Status:</h4>
-              <div className="text-sm text-gray-700 space-y-1">
-                <p>• Your request has been submitted and is being processed</p>
-                <p>• The system is currently working on Priority {(assignment.current_priority_index || 0) + 1}</p>
-                <p>• You will receive notifications about status updates</p>
-                <p>• If one supervisor declines, the system automatically moves to your next choice</p>
               </div>
             </div>
           </div>

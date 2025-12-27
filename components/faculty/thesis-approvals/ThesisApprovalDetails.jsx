@@ -1,7 +1,21 @@
 "use client";
 import { FileText, MessageCircle, CheckCircle, XCircle } from "lucide-react";
 
-export default function ThesisApprovalDetails({ thesis }) {
+/**
+ * Props:
+ *  - thesis: the mapped row from ThesisApprovalList (unchanged shape)
+ *  - onComment(): optional
+ *  - onApprove(): optional
+ *  - onReject(): optional
+ *
+ * UI is unchanged. We only wire the buttons and make the attachment link real.
+ */
+export default function ThesisApprovalDetails({
+  thesis,
+  onComment,
+  onApprove,
+  onReject,
+}) {
   return (
     <div className="border rounded-xl p-6 shadow-sm bg-white">
       <div className="flex justify-between items-start">
@@ -24,10 +38,20 @@ export default function ThesisApprovalDetails({ thesis }) {
           <p className="text-gray-500">{thesis.title}</p>
 
           <p className="font-semibold mt-4">Attachments</p>
-          <a href="#" className="text-blue-600 flex items-center gap-1 mt-1">
-            <FileText size={16} />
-            {thesis.attachment}
-          </a>
+          {thesis.attachment ? (
+            <a
+              href={thesis.attachmentUrl || "#"}
+              className="text-blue-600 flex items-center gap-1 mt-1"
+              target="_blank"
+              rel="noopener noreferrer"
+              download
+            >
+              <FileText size={16} />
+              {thesis.attachment}
+            </a>
+          ) : (
+            <span className="text-gray-500">-</span>
+          )}
         </div>
 
         <div>
@@ -42,15 +66,24 @@ export default function ThesisApprovalDetails({ thesis }) {
       </div>
 
       <div className="mt-6 flex gap-4">
-        <button className="bg-blue-600 text-white px-4 py-2 rounded flex items-center gap-2 hover:bg-blue-700">
+        <button
+          className="bg-blue-600 text-white px-4 py-2 rounded flex items-center gap-2 hover:bg-blue-700"
+          onClick={onComment}
+        >
           <MessageCircle size={16} />
           Comment
         </button>
-        <button className="bg-green-600 text-white px-4 py-2 rounded flex items-center gap-2 hover:bg-green-700">
+        <button
+          className="bg-green-600 text-white px-4 py-2 rounded flex items-center gap-2 hover:bg-green-700"
+          onClick={onApprove}
+        >
           <CheckCircle size={16} />
           Approve
         </button>
-        <button className="bg-red-600 text-white px-4 py-2 rounded flex items-center gap-2 hover:bg-red-700">
+        <button
+          className="bg-red-600 text-white px-4 py-2 rounded flex items-center gap-2 hover:bg-red-700"
+          onClick={onReject}
+        >
           <XCircle size={16} />
           Reject
         </button>

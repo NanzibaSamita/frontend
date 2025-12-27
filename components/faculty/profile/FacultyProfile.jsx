@@ -25,15 +25,14 @@ export default function FacultyProfile() {
         });
 
         if (!res.ok) {
-          throw new Error(
-            (await res.json()).message || "Failed to load profile"
-          );
+          const errJson = await res.json().catch(() => ({}));
+          throw new Error(errJson.message || "Failed to load profile");
         }
 
         const data = await res.json();
         setProfile(data);
       } catch (err) {
-        setError(err.message || "An error occurred");
+        setError(err?.message || "An error occurred");
       } finally {
         setLoading(false);
       }
@@ -41,14 +40,15 @@ export default function FacultyProfile() {
     fetchProfile();
   }, []);
 
-  if (loading)
+  if (loading) {
     return (
       <div className="flex min-h-screen bg-[#f8faf9] items-center justify-center">
         <span className="text-lg text-gray-700">Loading profile...</span>
       </div>
     );
+  }
 
-  if (error)
+  if (error) {
     return (
       <div className="flex min-h-screen bg-[#f8faf9] items-center justify-center">
         <div className="bg-white border border-red-300 rounded-md shadow-md p-8">
@@ -57,11 +57,12 @@ export default function FacultyProfile() {
         </div>
       </div>
     );
+  }
 
-  // ✅ Same look & layout as Student Profile
+  // Match student profile layout/box
   const fullName =
-    profile.fullName ||
-    [profile.first_name, profile.last_name].filter(Boolean).join(" ");
+    profile?.fullName ||
+    [profile?.first_name, profile?.last_name].filter(Boolean).join(" ");
 
   return (
     <div className="flex min-h-screen bg-[#f8faf9]">
@@ -82,14 +83,14 @@ export default function FacultyProfile() {
                     Email Address:
                   </td>
                   <td className="py-3 text-gray-800 text-right">
-                    {profile.email}
+                    {profile?.email}
                   </td>
                 </tr>
 
                 <tr className="border-b">
                   <td className="font-medium py-3 text-gray-700">Role:</td>
                   <td className="py-3 text-gray-800 text-right">
-                    {profile.role || "Faculty"}
+                    {profile?.role || "Faculty"}
                   </td>
                 </tr>
 
@@ -98,14 +99,14 @@ export default function FacultyProfile() {
                     Max Supervision Capacity:
                   </td>
                   <td className="py-3 text-gray-800 text-right">
-                    {profile.max_supervision_capacity ?? "-"}
+                    {profile?.max_supervision_capacity ?? "-"}
                   </td>
                 </tr>
               </tbody>
             </table>
           </div>
 
-          {/* Centered button under card */}
+          {/* Centered button under card, same as student profile */}
           <div className="mt-6 flex justify-center">
             <button
               onClick={() => router.push("/forgot-password")}
